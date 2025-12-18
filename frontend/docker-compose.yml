@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  # ============================================
+  # NEXT.JS APP
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV}
+    container_name: app
+    ports:
+      - "3000:3000" # opcional — útil para dev/local
+    environment:
+      NODE_ENV: production
+    depends_on:
+      mongo:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: always
+    networks:
+      - app-network
+
+  # ============================================
+  # NGINX (REVERSE PROXY)
+  # ============================================
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nginx
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    restart: always
+    networks:
+      - app-network
+
+  # ============================================
+  # MONGODB
+  # ============================================
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    restart: always
+    mem_limit: 512m
+    cpus: 0.5
+    networks:
+      - app-network
+
+# ============================================
+# VOLUMES & NETWORKS
+# ============================================
+volumes:
+  mongo_data:
+
+networks:
+  app-network:
+    driver: bridge
