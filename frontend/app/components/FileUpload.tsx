@@ -26,22 +26,27 @@ const FileUpload: React.FC = () => {
         return;
       }
 
-      let lineFeatures: any[] = [];
+      let lineFeatures: Array<{
+        id?: string | number;
+        type: string;
+        geometry: { type: string; coordinates: number[][] };
+        properties?: Record<string, unknown>;
+      }> = [];
 
       // Se for FeatureCollection, filtra LineStrings
       if (data.type === 'FeatureCollection') {
         const totalFeatures = data.features.length;
-        lineFeatures = data.features.filter((f: any) => f.geometry?.type === 'LineString');
+        lineFeatures = data.features.filter((f: { geometry?: { type: string } }) => f.geometry?.type === 'LineString');
 
         if (lineFeatures.length === 0) {
           const otherTypes = data.features
-            .map((f: any) => f.geometry?.type)
-            .filter((t: any) => t && t !== 'LineString')
+            .map((f: { geometry?: { type: string } }) => f.geometry?.type)
+            .filter((t: string | undefined) => t && t !== 'LineString')
             .join(', ');
 
           if (otherTypes) {
             setError(
-              `GeoJSON não contém linhas (LineString). Encontrado: ${otherTypes}. Esta aplicação trabalha apenas com linhas.`
+              `GeoJSON não contém linhas (LineString). Esta aplicação trabalha apenas com linhas.`
             );
           } else {
             setError('GeoJSON não contém nenhuma geometria válida.');
@@ -72,10 +77,18 @@ const FileUpload: React.FC = () => {
       }
 
       // Converte para o formato do store
-      const newFeatures = lineFeatures.map((f: any, i: number) => ({
-        id: f.id || `uploaded-${Date.now()}-${i}`,
+      const newFeatures = lineFeatures.map((f: {
+        id?: string | number;
+        type: string;
+        geometry: { type: string; coordinates: number[][] };
+        properties?: Record<string, unknown>;
+      }, i: number) => ({
+        id: f.id ? String(f.id) : `uploaded-${Date.now()}-${i}`,
         type: 'uploaded' as const,
-        geometry: f.geometry,
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: f.geometry.coordinates,
+        },
         properties: f.properties || {},
       }));
 

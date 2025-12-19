@@ -25,6 +25,7 @@ interface MapStore {
   addDrawingPoint: (p: Position) => void;
   clearDrawingPoints: () => void;
   finishDrawing: (props?: Record<string, unknown>) => Feature | null;
+  cancelDrawing: () => void;
   setError: (msg: string | null) => void;
   reset: () => void;
   getFeatureCount: () => number;
@@ -51,10 +52,13 @@ export const useMapStore = create<MapStore>((set, get) => ({
     })),
 
   removeFeature: (id: string) =>
-    set((s: MapStore) => ({
-      features: s.features.filter((f) => f.id !== id),
-      selectedFeatureId: s.selectedFeatureId === id ? null : s.selectedFeatureId,
-    })),
+    set((s: MapStore) => {
+      const newFeatures = s.features.filter((f) => f.id !== id);
+      return {
+        features: newFeatures,
+        selectedFeatureId: s.selectedFeatureId === id ? null : s.selectedFeatureId,
+      };
+    }),
 
   selectFeature: (id: string | null) => set(() => ({ selectedFeatureId: id })),
 
@@ -80,10 +84,10 @@ export const useMapStore = create<MapStore>((set, get) => ({
   finishDrawing: (props: Record<string, unknown> = {}) => {
     const points = get().drawingPoints;
     if (!points || points.length < 2) {
-      set({ error: 'Need at least 2 points to finish a line.' });
+      set({ error: 'Necessário pelo menos 2 pontos para criar uma linha.' });
       return null;
     }
-    const id = `f_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const id = `drawn-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     const feature: Feature = {
       id,
       type: 'drawn',
@@ -95,9 +99,17 @@ export const useMapStore = create<MapStore>((set, get) => ({
       drawingPoints: [],
       isDrawing: false,
       mode: 'idle',
+      selectedFeatureId: null,
     }));
     return feature;
   },
+
+  cancelDrawing: () =>
+    set(() => ({
+      drawingPoints: [],
+      isDrawing: false,
+      mode: 'idle',
+    })),
 
   setError: (msg: string | null) => set(() => ({ error: msg })),
 
