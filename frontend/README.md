@@ -20,7 +20,6 @@ frontend/
 ├── .env.example
 └── README.md
 ```
-
 ---
 
 ## 🚀 Como Rodar o Projeto
@@ -87,12 +86,12 @@ npm run lint
 
 ## 🧱 Tecnologias usadas
 
-- **Next.js 14+ (App Router)**
-- **React 18**
-- **TypeScript**
-- **Nginx (proxy reverso)**
-- **MongoDB + Volume Persistente**
-- **Docker + Docker Compose**
+* **Next.js 14+ (App Router)**
+* **React 18**
+* **TypeScript**
+* **Nginx (proxy reverso)**
+* **MongoDB + Volume Persistente**
+* **Docker + Docker Compose**
 
 ---
 
