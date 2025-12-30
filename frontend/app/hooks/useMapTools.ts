@@ -1,0 +1,111 @@
+import { useEffect, RefObject } from 'react';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import { useMapStore, type ToolMode } from '../store/mapStore';
+import { offsetLine, smoothLine } from '../utils/turfOperations';
+import { DRAW_MODES } from '../constants/map';
+import type { Feature } from '../types';
+
+interface UseMapToolsProps {
+  drawRef: RefObject<MapboxDraw | null>;
+  mapLoadedRef: RefObject<boolean>;
+  activeTool: ToolMode;
+  features: Feature[];
+  selectedFeatureId: string | null;
+}
+
+export const useMapTools = ({
+  drawRef,
+  mapLoadedRef,
+  activeTool,
+  features,
+  selectedFeatureId,
+}: UseMapToolsProps) => {
+  useEffect(() => {
+    const draw = drawRef.current;
+    if (!draw || !mapLoadedRef.current) return;
+
+    const {
+      setActiveTool,
+      setError,
+      addFeature,
+      removeFeature,
+      offsetDistance,
+    } = useMapStore.getState();
+
+    switch (activeTool) {
+      case 'draw':
+        draw.changeMode(DRAW_MODES.DRAW_LINE);
+        break;
+
+      case 'snap':
+        draw.deleteAll();
+        features.forEach((feature) => {
+          const featureToAdd = {
+            type: 'Feature' as const,
+            geometry: feature.geometry,
+            properties: { ...feature.properties, originalId: feature.id },
+            id: feature.id,
+          };
+          draw.add(featureToAdd);
+        });
+        
+        try {
+          draw.changeMode(DRAW_MODES.SNAP_LINE);
+        } catch (error) {
+          console.error('Erro ao ativar snap:', error);
+          draw.changeMode(DRAW_MODES.DRAW_LINE);
+        }
+        break;
+
+      case 'split':
+        if (selectedFeatureId) {
+          draw.changeMode(DRAW_MODES.DRAW_LINE);
+        }
+        break;
+
+      case 'offset':
+        if (selectedFeatureId) {
+          const selectedFeature = features.find((f) => f.id === selectedFeatureId);
+          if (selectedFeature) {
+            const offsetResult = offsetLine(selectedFeature, offsetDistance);
+            if (offsetResult) {
+              addFeature(offsetResult);
+              setError(null);
+            } else {
+              setError('Erro ao criar linha paralela');
+            }
+          }
+        }
+        setActiveTool(null);
+        break;
+
+      case 'simplify':
+        if (selectedFeatureId) {
+          const selectedFeature = features.find((f) => f.id === selectedFeatureId);
+          if (selectedFeature) {
+            const smoothResult = smoothLine(selectedFeature);
+            if (smoothResult) {
+              removeFeature(selectedFeatureId);
+              addFeature(smoothResult);
+              setError(null);
+            }
+          }
+        }
+        setActiveTool(null);
+        break;
+
+      case null:
+        draw.deleteAll();
+        draw.changeMode(DRAW_MODES.SIMPLE_SELECT);
+        break;
+
+      default:
+        if (activeTool === undefined) {
+          draw.deleteAll();
+          draw.changeMode(DRAW_MODES.SIMPLE_SELECT);
+        }
+        break;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool, selectedFeatureId]);
+};

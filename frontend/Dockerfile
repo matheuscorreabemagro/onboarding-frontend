@@ -8,6 +8,12 @@ WORKDIR /app
 # Use build args para variáveis de ambiente públicas
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_APP_ENV
+ARG NEXT_PUBLIC_MAPBOX_TOKEN
+
+# Converter ARGs em ENVs para que o Next.js possa usá-las no build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_APP_ENV=$NEXT_PUBLIC_APP_ENV
+ENV NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
 
 # Copia arquivos de dependências primeiro (cache + rápido)
 COPY package*.json ./
