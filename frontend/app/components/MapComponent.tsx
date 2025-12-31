@@ -29,6 +29,7 @@ const MapComponent: React.FC = () => {
   const selectedFeatureId = useMapStore((state) => state.selectedFeatureId);
   const hoveredFeatureId = useMapStore((state) => state.hoveredFeatureId);
   const activeTool = useMapStore((state) => state.activeTool);
+  const uploadCounter = useMapStore((state) => state.uploadCounter);
 
   useMapInitialization({
     containerRef: mapContainerRef,
@@ -46,7 +47,7 @@ const MapComponent: React.FC = () => {
   useMapClick({ mapRef, mapLoadedRef });
   useKeyboardEvents({ selectedFeatureId });
   useCursor({ mapRef, activeTool });
-  useFeatures({ mapRef, mapLoadedRef, hasFitBoundsRef, features });
+  useFeatures({ mapRef, mapLoadedRef, hasFitBoundsRef, features, uploadCounter });
 
   return (
     <div ref={mapContainerRef} style={{ width: '100vw', height: '100vh' }} className="relative" />

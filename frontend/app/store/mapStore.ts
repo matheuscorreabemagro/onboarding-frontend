@@ -13,6 +13,7 @@ interface MapStore {
   activeTool: ToolMode;
   offsetDistance: number;
   simplifyTolerance: number;
+  uploadCounter: number;
 
   // ações
   addFeature: (feature: Feature) => void;
@@ -40,11 +41,12 @@ export const useMapStore = create<MapStore>((set, get) => ({
   activeTool: null,
   offsetDistance: 10,
   simplifyTolerance: 0.01,
+  uploadCounter: 0,
 
   // ações
   addFeature: (feature: Feature) => set((s: MapStore) => ({ features: [...s.features, feature] })),
 
-  setFeatures: (features: Feature[]) => set(() => ({ features })),
+  setFeatures: (features: Feature[]) => set((s: MapStore) => ({ features, uploadCounter: s.uploadCounter + 1 })),
 
   updateFeature: (feature: Feature) =>
     set((s: MapStore) => ({
@@ -76,6 +78,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
       error: null,
       mode: 'idle',
       activeTool: null,
+      uploadCounter: 0,
     })),
 
   getFeatureCount: () => get().features.length,

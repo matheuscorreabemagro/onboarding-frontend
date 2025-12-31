@@ -9,6 +9,7 @@ interface UseFeaturesProps {
   mapLoadedRef: RefObject<boolean>;
   hasFitBoundsRef: RefObject<boolean>;
   features: Feature[];
+  uploadCounter: number;
 }
 
 export const useFeatures = ({
@@ -16,6 +17,7 @@ export const useFeatures = ({
   mapLoadedRef,
   hasFitBoundsRef,
   features,
+  uploadCounter,
 }: UseFeaturesProps) => {
   useEffect(() => {
     const map = mapRef.current;
@@ -23,9 +25,10 @@ export const useFeatures = ({
 
     updateMapSource(map, LAYER_IDS.LINES_SOURCE, features);
 
-    if (features.length > 0 && !hasFitBoundsRef.current) {
+    // Sempre ajusta o zoom quando há features, independente do estado anterior
+    if (features.length > 0) {
       fitMapToFeatures(map, features);
       hasFitBoundsRef.current = true;
     }
-  }, [features]);
+  }, [features, uploadCounter]);
 };
