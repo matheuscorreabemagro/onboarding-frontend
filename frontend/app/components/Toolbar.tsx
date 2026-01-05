@@ -4,6 +4,14 @@ import { useMapStore, type ToolMode } from '../store/mapStore';
 import { useState } from 'react';
 import FileUpload from './FileUpload';
 
+/**
+ * Constante para posição central do popup
+ */
+const POPUP_CENTER_POSITION = {
+  getX: () => window.innerWidth / 2,
+  getY: () => window.innerHeight / 2,
+};
+
 interface ToolButton {
   id: ToolMode;
   icon: string;
@@ -73,7 +81,7 @@ export default function Toolbar() {
     // Se offset/simplify e linha já selecionada, mostra popup imediatamente no centro
     if ((toolId === 'offset' || toolId === 'simplify') && selectedFeatureId) {
       setActiveTool(toolId);
-      setPopupPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      setPopupPosition({ x: POPUP_CENTER_POSITION.getX(), y: POPUP_CENTER_POSITION.getY() });
     } else {
       setActiveTool(activeTool === toolId ? null : toolId);
     }
@@ -97,6 +105,7 @@ export default function Toolbar() {
             onClick={() => setShowUploadModal(true)}
             className="group relative w-12 h-12 rounded-lg transition-all bg-linear-to-br from-green-500 to-emerald-600 text-white hover:shadow-md hover:scale-105"
             title="Upload GeoJSON"
+            aria-label="Abrir modal de upload de arquivo GeoJSON"
           >
             <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -178,6 +187,7 @@ export default function Toolbar() {
             onClick={handleRemove}
             className="mt-3 w-12 h-12 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
             title="Remover linha selecionada"
+            aria-label="Remover linha selecionada do mapa"
           >
             <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -189,11 +199,18 @@ export default function Toolbar() {
 
     {/* Modal de Upload */}
     {showUploadModal && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60" onClick={() => setShowUploadModal(false)}>
+      <div 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="upload-modal-title"
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-60" 
+        onClick={() => setShowUploadModal(false)}
+      >
         <div className="relative" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => setShowUploadModal(false)}
             className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+            aria-label="Fechar modal de upload"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

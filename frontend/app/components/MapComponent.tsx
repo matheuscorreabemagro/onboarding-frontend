@@ -56,19 +56,6 @@ const MapComponent: React.FC = () => {
 
     if (offsetResults.length > 0) {
       offsetResults.forEach((line) => addFeature(line));
-      
-      // Zoom na área
-      const map = mapRef.current;
-      if (map) {
-        const allLines = [selectedFeature, ...offsetResults];
-        const bounds = new mapboxgl.LngLatBounds();
-        allLines.forEach((feature) => {
-          feature.geometry.coordinates.forEach((coord) => {
-            bounds.extend(coord as [number, number]);
-          });
-        });
-        map.fitBounds(bounds, { padding: 50, duration: 600 });
-      }
     }
     
     setPopupPosition(null);

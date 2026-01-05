@@ -4,6 +4,8 @@ import { isValidGeoJSON } from '../utils/geojsonValidator';
 import React, { useRef, useState, useEffect } from 'react';
 import { useMapStore } from '../store/mapStore';
 import Alert from './Alert';
+import { logger } from '../utils/logger';
+import type { GeoJSONFeature } from '../types';
 
 interface FileUploadProps {
   onClose?: () => void;
@@ -28,12 +30,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
         return;
       }
 
-      let lineFeatures: Array<{
-        id?: string | number;
-        type: string;
-        geometry: { type: string; coordinates: number[][] };
-        properties?: Record<string, unknown>;
-      }> = [];
+      let lineFeatures: GeoJSONFeature[] = [];
 
       // Se for FeatureCollection, filtra LineStrings
       if (data.type === 'FeatureCollection') {
@@ -58,7 +55,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
 
         // Informa se filtrou algumas features
         if (lineFeatures.length < totalFeatures) {
-          console.warn(
+          logger.warn(
             `⚠️ ${totalFeatures - lineFeatures.length} feature(s) ignorada(s) (apenas LineStrings são suportadas)`
           );
         }
@@ -79,12 +76,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
       }
 
       // Converte para o formato do store
-      const newFeatures = lineFeatures.map((f: {
-        id?: string | number;
-        type: string;
-        geometry: { type: string; coordinates: number[][] };
-        properties?: Record<string, unknown>;
-      }, i: number) => ({
+      const newFeatures = lineFeatures.map((f: GeoJSONFeature, i: number) => ({
         id: f.id ? String(f.id) : `uploaded-${Date.now()}-${i}`,
         type: 'uploaded' as const,
         geometry: {
@@ -106,7 +98,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
       } else {
         setError('Erro ao ler arquivo. Verifique se o arquivo está correto.');
       }
-      console.error('Erro no upload:', e);
+      logger.error('Erro no upload:', e);
     }
   };
 

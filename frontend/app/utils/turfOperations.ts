@@ -1,6 +1,7 @@
 // @ts-expect-error - Turf.js types compatibility issue
 import * as turf from '@turf/turf';
 import type { Feature } from '../types';
+import { logger } from './logger';
 
 /**
  * Divide uma linha usando outra linha como cortador
@@ -21,7 +22,7 @@ export const splitLine = (
     const split = turf.lineSplit(turfLine, turfSplitter);
 
     if (!split.features || split.features.length === 0) {
-      console.warn('Nenhum corte foi realizado. As linhas não se intersectam?');
+      logger.warn('Nenhum corte foi realizado. As linhas não se intersectam?');
       return [targetLine];
     }
 
@@ -41,7 +42,7 @@ export const splitLine = (
       },
     }));
   } catch (error) {
-    console.error('Erro ao realizar split:', error);
+    logger.error('Erro ao realizar split:', error);
     return [targetLine];
   }
 };
@@ -61,7 +62,7 @@ export const offsetLine = (
     const offset = turf.lineOffset(turfLine, distance, { units: 'meters' });
 
     if (!offset || !offset.geometry) {
-      console.warn('Não foi possível criar offset');
+      logger.warn('Não foi possível criar offset');
       return null;
     }
 
@@ -79,7 +80,7 @@ export const offsetLine = (
       },
     };
   } catch (error) {
-    console.error('Erro ao criar offset:', error);
+    logger.error('Erro ao criar offset:', error);
     return null;
   }
 };
@@ -152,7 +153,7 @@ export const createMultipleOffsets = (
 
     return results;
   } catch (error) {
-    console.error('Erro ao criar offsets múltiplos:', error);
+    logger.error('Erro ao criar offsets múltiplos:', error);
     return [];
   }
 };
@@ -191,7 +192,7 @@ export const simplifyLine = (
       },
     };
   } catch (error) {
-    console.error('Erro ao simplificar linha:', error);
+    logger.error('Erro ao simplificar linha:', error);
     return line;
   }
 };
@@ -228,7 +229,7 @@ export const smoothLine = (
       },
     };
   } catch (error) {
-    console.error('Erro ao suavizar linha com Bézier:', error);
+    logger.error('Erro ao suavizar linha com Bézier:', error);
     return line;
   }
 };
@@ -243,7 +244,7 @@ export const calculateLength = (line: Feature): number => {
     const turfLine = turf.lineString(line.geometry.coordinates);
     return turf.length(turfLine, { units: 'meters' });
   } catch (error) {
-    console.error('Erro ao calcular comprimento:', error);
+    logger.error('Erro ao calcular comprimento:', error);
     return 0;
   }
 };
@@ -261,7 +262,7 @@ export const linesIntersect = (line1: Feature, line2: Feature): boolean => {
     const intersection = turf.lineIntersect(turfLine1, turfLine2);
     return intersection.features.length > 0;
   } catch (error) {
-    console.error('Erro ao verificar interseção:', error);
+    logger.error('Erro ao verificar interseção:', error);
     return false;
   }
 };

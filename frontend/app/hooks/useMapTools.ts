@@ -3,6 +3,7 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { type ToolMode } from '../store/mapStore';
 import { DRAW_MODES } from '../constants/map';
 import type { Feature } from '../types';
+import { logger } from '../utils/logger';
 
 interface UseMapToolsProps {
   drawRef: RefObject<MapboxDraw | null>;
@@ -43,7 +44,7 @@ export const useMapTools = ({
         try {
           draw.changeMode(DRAW_MODES.SNAP_LINE);
         } catch (error) {
-          console.error('Erro ao ativar snap:', error);
+          logger.error('Erro ao ativar snap:', error);
           draw.changeMode(DRAW_MODES.DRAW_LINE);
         }
         break;

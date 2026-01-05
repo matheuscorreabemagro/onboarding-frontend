@@ -2,6 +2,19 @@ import type { LineString, Position } from 'geojson';
 
 export type FeatureType = 'uploaded' | 'drawn' | 'field' | 'plantingLine';
 
+/**
+ * Representa uma feature GeoJSON antes da conversão para o formato interno
+ */
+export interface GeoJSONFeature {
+  id?: string | number;
+  type: string;
+  geometry: {
+    type: string;
+    coordinates: number[][];
+  };
+  properties?: Record<string, unknown>;
+}
+
 export interface Feature {
   id: string;
   type: FeatureType;

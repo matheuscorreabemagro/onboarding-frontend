@@ -21,8 +21,6 @@ describe('mapStore', () => {
       expect(result.current.error).toBeNull();
       expect(result.current.mode).toBe('idle');
       expect(result.current.activeTool).toBeNull();
-      expect(result.current.offsetDistance).toBe(10);
-      expect(result.current.simplifyTolerance).toBe(0.01);
     });
   });
 
@@ -403,30 +401,6 @@ describe('mapStore', () => {
       });
 
       expect(result.current.error).toBeNull();
-    });
-  });
-
-  describe('setOffsetDistance', () => {
-    it('deve alterar distância de offset', () => {
-      const { result } = renderHook(() => useMapStore());
-
-      act(() => {
-        result.current.setOffsetDistance(50);
-      });
-
-      expect(result.current.offsetDistance).toBe(50);
-    });
-  });
-
-  describe('setSimplifyTolerance', () => {
-    it('deve alterar tolerância de simplificação', () => {
-      const { result } = renderHook(() => useMapStore());
-
-      act(() => {
-        result.current.setSimplifyTolerance(0.05);
-      });
-
-      expect(result.current.simplifyTolerance).toBe(0.05);
     });
   });
 

@@ -6,9 +6,21 @@ import type { Feature } from '../../types';
 // Mock do store
 jest.mock('../../store/mapStore');
 
+// Mock do FileUpload
+jest.mock('../FileUpload', () => {
+  return function MockFileUpload({ onClose }: { onClose?: () => void }) {
+    return (
+      <div data-testid="mock-file-upload">
+        <button onClick={onClose}>Close Upload</button>
+      </div>
+    );
+  };
+});
+
 describe('Toolbar', () => {
   const mockSetActiveTool = jest.fn();
   const mockRemoveFeature = jest.fn();
+  const mockSetPopupPosition = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -20,18 +32,23 @@ describe('Toolbar', () => {
         activeTool: null,
         setActiveTool: mockSetActiveTool,
         removeFeature: mockRemoveFeature,
+        setPopupPosition: mockSetPopupPosition,
       };
       return selector(state);
     });
   });
 
-  describe('Renderização', () => {
-    it('deve renderizar título e contador', () => {
+  describe('Renderização da Sidebar', () => {
+    it('deve renderizar a sidebar com largura fixa', () => {
       render(<Toolbar />);
+      const sidebar = screen.getByRole('button', { name: /upload/i }).closest('div.fixed');
+      expect(sidebar).toHaveClass('w-16');
+    });
 
-      expect(screen.getByText('Controles')).toBeInTheDocument();
-      expect(screen.getByText('Total de linhas:')).toBeInTheDocument();
+    it('deve mostrar contador de linhas como 0 inicialmente', () => {
+      render(<Toolbar />);
       expect(screen.getByText('0')).toBeInTheDocument();
+      expect(screen.getByText('linhas')).toBeInTheDocument();
     });
 
     it('deve mostrar contador correto de features', () => {
@@ -44,7 +61,7 @@ describe('Toolbar', () => {
         },
         {
           id: 'line-2',
-          type: 'drawn',
+          type: 'uploaded',
           geometry: { type: 'LineString', coordinates: [[2, 2], [3, 3]] },
           properties: {},
         },
@@ -57,32 +74,76 @@ describe('Toolbar', () => {
           activeTool: null,
           setActiveTool: mockSetActiveTool,
           removeFeature: mockRemoveFeature,
+          setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
       });
 
       render(<Toolbar />);
-
       expect(screen.getByText('2')).toBeInTheDocument();
     });
 
-    it('deve renderizar todas as ferramentas', () => {
+    it('deve renderizar botão de upload com aria-label', () => {
       render(<Toolbar />);
+      const uploadButton = screen.getByRole('button', { name: /upload de arquivo geojson/i });
+      expect(uploadButton).toBeInTheDocument();
+    });
 
-      expect(screen.getByText('Desenhar')).toBeInTheDocument();
-      expect(screen.getByText('Snap')).toBeInTheDocument();
-      expect(screen.getByText('Cortar')).toBeInTheDocument();
-      expect(screen.getByText('Offset')).toBeInTheDocument();
-      expect(screen.getByText('Suavizar')).toBeInTheDocument();
+    it('deve renderizar todas as 5 ferramentas', () => {
+      render(<Toolbar />);
+      
+      // Verificar pelos títulos/tooltips
+      const buttons = screen.getAllByRole('button');
+      const toolButtons = buttons.filter(btn => 
+        btn.getAttribute('title')?.includes('linha') || 
+        btn.getAttribute('title')?.includes('magnética') ||
+        btn.getAttribute('title')?.includes('geometria')
+      );
+      
+      expect(toolButtons.length).toBeGreaterThanOrEqual(5);
     });
   });
 
-  describe('Ativação de Ferramentas', () => {
+  describe('Botão de Upload', () => {
+    it('deve abrir modal ao clicar no botão de upload', () => {
+      render(<Toolbar />);
+      
+      const uploadButton = screen.getByRole('button', { name: /upload de arquivo geojson/i });
+      fireEvent.click(uploadButton);
+      
+      expect(screen.getByTestId('mock-file-upload')).toBeInTheDocument();
+    });
+
+    it('deve fechar modal ao clicar fora', () => {
+      render(<Toolbar />);
+      
+      const uploadButton = screen.getByRole('button', { name: /upload de arquivo geojson/i });
+      fireEvent.click(uploadButton);
+      
+      const modal = screen.getByRole('dialog');
+      fireEvent.click(modal);
+      
+      expect(screen.queryByTestId('mock-file-upload')).not.toBeInTheDocument();
+    });
+
+    it('modal deve ter atributos de acessibilidade', () => {
+      render(<Toolbar />);
+      
+      const uploadButton = screen.getByRole('button', { name: /upload de arquivo geojson/i });
+      fireEvent.click(uploadButton);
+      
+      const modal = screen.getByRole('dialog');
+      expect(modal).toHaveAttribute('aria-modal', 'true');
+      expect(modal).toHaveAttribute('aria-labelledby', 'upload-modal-title');
+    });
+  });
+
+  describe('Ferramentas', () => {
     it('deve ativar ferramenta de desenho ao clicar', () => {
       render(<Toolbar />);
 
-      const drawButton = screen.getByText('Desenhar').closest('button');
-      fireEvent.click(drawButton!);
+      const drawButton = screen.getByTitle('Desenhar nova linha');
+      fireEvent.click(drawButton);
 
       expect(mockSetActiveTool).toHaveBeenCalledWith('draw');
     });
@@ -95,14 +156,15 @@ describe('Toolbar', () => {
           activeTool: 'draw',
           setActiveTool: mockSetActiveTool,
           removeFeature: mockRemoveFeature,
+          setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
       });
 
       render(<Toolbar />);
 
-      const drawButton = screen.getByText('Desenhar').closest('button');
-      fireEvent.click(drawButton!);
+      const drawButton = screen.getByTitle('Desenhar nova linha');
+      fireEvent.click(drawButton);
 
       expect(mockSetActiveTool).toHaveBeenCalledWith(null);
     });
@@ -110,10 +172,29 @@ describe('Toolbar', () => {
     it('deve ativar ferramenta snap', () => {
       render(<Toolbar />);
 
-      const snapButton = screen.getByText('Snap').closest('button');
-      fireEvent.click(snapButton!);
+      const snapButton = screen.getByTitle('Ativar atração magnética');
+      fireEvent.click(snapButton);
 
       expect(mockSetActiveTool).toHaveBeenCalledWith('snap');
+    });
+
+    it('deve aplicar estilo ativo quando ferramenta está selecionada', () => {
+      (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
+        const state = {
+          features: [],
+          selectedFeatureId: null,
+          activeTool: 'draw',
+          setActiveTool: mockSetActiveTool,
+          removeFeature: mockRemoveFeature,
+          setPopupPosition: mockSetPopupPosition,
+        };
+        return selector(state);
+      });
+
+      render(<Toolbar />);
+
+      const drawButton = screen.getByTitle('Desenhar nova linha');
+      expect(drawButton).toHaveClass('bg-blue-600');
     });
   });
 
@@ -121,21 +202,22 @@ describe('Toolbar', () => {
     it('deve desabilitar botão Cortar sem seleção', () => {
       render(<Toolbar />);
 
-      const splitButton = screen.getByText('Cortar').closest('button');
+      const splitButton = screen.getByTitle('Dividir linha existente');
       expect(splitButton).toBeDisabled();
+      expect(splitButton).toHaveClass('cursor-not-allowed');
     });
 
     it('deve desabilitar botão Offset sem seleção', () => {
       render(<Toolbar />);
 
-      const offsetButton = screen.getByText('Offset').closest('button');
+      const offsetButton = screen.getByTitle('Criar linhas paralelas');
       expect(offsetButton).toBeDisabled();
     });
 
     it('deve desabilitar botão Suavizar sem seleção', () => {
       render(<Toolbar />);
 
-      const simplifyButton = screen.getByText('Suavizar').closest('button');
+      const simplifyButton = screen.getByTitle('Suavizar geometria');
       expect(simplifyButton).toBeDisabled();
     });
 
@@ -154,19 +236,42 @@ describe('Toolbar', () => {
           activeTool: null,
           setActiveTool: mockSetActiveTool,
           removeFeature: mockRemoveFeature,
+          setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
       });
 
       render(<Toolbar />);
 
-      const splitButton = screen.getByText('Cortar').closest('button');
-      const offsetButton = screen.getByText('Offset').closest('button');
-      const simplifyButton = screen.getByText('Suavizar').closest('button');
+      const splitButton = screen.getByTitle('Dividir linha existente');
+      const offsetButton = screen.getByTitle('Criar linhas paralelas');
+      const simplifyButton = screen.getByTitle('Suavizar geometria');
 
       expect(splitButton).not.toBeDisabled();
       expect(offsetButton).not.toBeDisabled();
       expect(simplifyButton).not.toBeDisabled();
+    });
+
+    it('deve chamar setPopupPosition ao clicar em offset com linha selecionada', () => {
+      (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
+        const state = {
+          features: [{ id: 'line-1', type: 'drawn', geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] }, properties: {} }],
+          selectedFeatureId: 'line-1',
+          activeTool: null,
+          setActiveTool: mockSetActiveTool,
+          removeFeature: mockRemoveFeature,
+          setPopupPosition: mockSetPopupPosition,
+        };
+        return selector(state);
+      });
+
+      render(<Toolbar />);
+
+      const offsetButton = screen.getByTitle('Criar linhas paralelas');
+      fireEvent.click(offsetButton);
+
+      expect(mockSetActiveTool).toHaveBeenCalledWith('offset');
+      expect(mockSetPopupPosition).toHaveBeenCalled();
     });
   });
 
@@ -174,7 +279,8 @@ describe('Toolbar', () => {
     it('não deve mostrar botão remover sem seleção', () => {
       render(<Toolbar />);
 
-      expect(screen.queryByText('Remover Linha')).not.toBeInTheDocument();
+      const removeButton = screen.queryByRole('button', { name: /remover linha selecionada do mapa/i });
+      expect(removeButton).not.toBeInTheDocument();
     });
 
     it('deve mostrar botão remover quando linha está selecionada', () => {
@@ -192,13 +298,15 @@ describe('Toolbar', () => {
           activeTool: null,
           setActiveTool: mockSetActiveTool,
           removeFeature: mockRemoveFeature,
+          setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
       });
 
       render(<Toolbar />);
 
-      expect(screen.getByText('Remover Linha')).toBeInTheDocument();
+      const removeButton = screen.getByRole('button', { name: /remover linha selecionada do mapa/i });
+      expect(removeButton).toBeInTheDocument();
     });
 
     it('deve chamar removeFeature ao clicar no botão', () => {
@@ -216,101 +324,20 @@ describe('Toolbar', () => {
           activeTool: null,
           setActiveTool: mockSetActiveTool,
           removeFeature: mockRemoveFeature,
+          setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
       });
 
       render(<Toolbar />);
 
-      const removeButton = screen.getByText('Remover Linha');
+      const removeButton = screen.getByRole('button', { name: /remover linha selecionada do mapa/i });
       fireEvent.click(removeButton);
 
       expect(mockRemoveFeature).toHaveBeenCalledWith('line-1');
     });
 
-    it('não deve mostrar botão remover quando ferramenta está ativa', () => {
-      (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
-        const state = {
-          features: [
-            {
-              id: 'line-1',
-              type: 'drawn',
-              geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
-              properties: {},
-            },
-          ],
-          selectedFeatureId: 'line-1',
-          activeTool: 'split',
-          setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
-        };
-        return selector(state);
-      });
-
-      render(<Toolbar />);
-
-      expect(screen.queryByText('Remover Linha')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Instruções de ferramenta ativa', () => {
-    it('deve mostrar instruções quando ferramenta draw está ativa', () => {
-      (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
-        const state = {
-          features: [],
-          selectedFeatureId: null,
-          activeTool: 'draw',
-          setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
-        };
-        return selector(state);
-      });
-
-      render(<Toolbar />);
-
-      expect(screen.getByText('Desenhar Ativo')).toBeInTheDocument();
-      expect(screen.getByText('Clique no mapa • Duplo clique finaliza')).toBeInTheDocument();
-    });
-
-    it('deve mostrar instruções quando ferramenta snap está ativa', () => {
-      (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
-        const state = {
-          features: [],
-          selectedFeatureId: null,
-          activeTool: 'snap',
-          setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
-        };
-        return selector(state);
-      });
-
-      render(<Toolbar />);
-
-      expect(screen.getByText('Snap Ativo')).toBeInTheDocument();
-      expect(screen.getByText(/Desenhe próximo aos vértices/)).toBeInTheDocument();
-    });
-
-    it('deve mostrar instruções quando ferramenta split está ativa', () => {
-      (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
-        const state = {
-          features: [{ id: 'line-1', type: 'drawn', geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] }, properties: {} }],
-          selectedFeatureId: 'line-1',
-          activeTool: 'split',
-          setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
-        };
-        return selector(state);
-      });
-
-      render(<Toolbar />);
-
-      expect(screen.getByText('Cortar Ativo')).toBeInTheDocument();
-      expect(screen.getByText('Desenhe linha de corte • Duplo clique finaliza')).toBeInTheDocument();
-    });
-  });
-
-  describe('Indicador visual de seleção', () => {
-    it('deve mostrar indicador quando linha está selecionada', () => {
+    it('botão remover deve ter estilo vermelho', () => {
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
           features: [{ id: 'line-1', type: 'drawn', geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] }, properties: {} }],
@@ -318,40 +345,15 @@ describe('Toolbar', () => {
           activeTool: null,
           setActiveTool: mockSetActiveTool,
           removeFeature: mockRemoveFeature,
+          setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
       });
 
       render(<Toolbar />);
 
-      expect(screen.getByText('✅ LINHA SELECIONADA (Vermelha)')).toBeInTheDocument();
-      expect(screen.getByText(/Agora você pode usar: Cortar/)).toBeInTheDocument();
-    });
-
-    it('não deve mostrar indicador sem seleção', () => {
-      render(<Toolbar />);
-
-      expect(screen.queryByText('✅ LINHA SELECIONADA (Vermelha)')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Estilos visuais', () => {
-    it('deve aplicar estilo ativo na ferramenta selecionada', () => {
-      (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
-        const state = {
-          features: [],
-          selectedFeatureId: null,
-          activeTool: 'draw',
-          setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
-        };
-        return selector(state);
-      });
-
-      render(<Toolbar />);
-
-      const drawButton = screen.getByText('Desenhar').closest('button');
-      expect(drawButton).toHaveClass('bg-blue-500');
+      const removeButton = screen.getByRole('button', { name: /remover linha selecionada do mapa/i });
+      expect(removeButton).toHaveClass('bg-red-50', 'text-red-600');
     });
   });
 });
