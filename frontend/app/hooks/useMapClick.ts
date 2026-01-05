@@ -29,10 +29,13 @@ export const useMapClick = ({ mapRef, mapLoadedRef }: UseMapClickProps) => {
           selectFeature(featureId);
           setPopupPosition({ x: e.point.x, y: e.point.y });
         } else if (!activeTool && mapFeatures.length > 0) {
+          // Sem ferramenta ativa: seleciona e mostra popup de delete
           const featureId = mapFeatures[0].properties?.id;
           selectFeature(featureId);
+          setPopupPosition({ x: e.point.x, y: e.point.y });
         } else if (!activeTool) {
           selectFeature(null);
+          setPopupPosition(null);
         }
       };
 

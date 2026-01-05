@@ -17,6 +17,7 @@ import { useCursor } from '../hooks/useCursor';
 import { useFeatures } from '../hooks/useFeatures';
 import FieldOffsetPopup from './FieldOffsetPopup';
 import SimplifyPopup from './SimplifyPopup';
+import DeletePopup from './DeletePopup';
 import { createMultipleOffsets, smoothLine } from '../utils/turfOperations';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
@@ -121,6 +122,20 @@ const MapComponent: React.FC = () => {
           onClose={() => {
             setPopupPosition(null);
             setActiveTool(null);
+          }}
+        />
+      )}
+      
+      {/* Popup de exclusão quando nenhuma ferramenta está ativa */}
+      {!activeTool && popupPosition && selectedFeatureId && (
+        <DeletePopup
+          position={popupPosition}
+          onConfirm={() => {
+            removeFeature(selectedFeatureId);
+            setPopupPosition(null);
+          }}
+          onClose={() => {
+            setPopupPosition(null);
           }}
         />
       )}
