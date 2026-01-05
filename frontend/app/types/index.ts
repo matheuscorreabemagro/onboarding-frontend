@@ -1,6 +1,6 @@
 import type { LineString, Position } from 'geojson';
 
-export type FeatureType = 'uploaded' | 'drawn';
+export type FeatureType = 'uploaded' | 'drawn' | 'field' | 'plantingLine';
 
 export interface Feature {
   id: string;
@@ -19,4 +19,9 @@ export interface MapState {
   drawingPoints: Position[];
   error: string | null;
   mode: MapMode;
+}
+
+export interface PopupPosition {
+  x: number;
+  y: number;
 }

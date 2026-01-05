@@ -85,6 +85,79 @@ export const offsetLine = (
 };
 
 /**
+ * Cria múltiplas linhas paralelas (offset) para linhas de plantio
+ * @param line Linha base
+ * @param config Configuração do offset (distância, quantidade esquerda/direita)
+ * @returns Array de features com as linhas paralelas criadas
+ */
+export const createMultipleOffsets = (
+  line: Feature,
+  config: { distance: number; leftCount: number; rightCount: number }
+): Feature[] => {
+  const results: Feature[] = [];
+  const timestamp = Date.now();
+
+  try {
+    // Cria linhas à esquerda (distância positiva)
+    for (let i = 1; i <= config.leftCount; i++) {
+      const distance = config.distance * i;
+      const turfLine = turf.lineString(line.geometry.coordinates);
+      const offset = turf.lineOffset(turfLine, distance, { units: 'meters' });
+
+      if (offset && offset.geometry) {
+        results.push({
+          id: `offset-left-${i}-${timestamp}`,
+          type: 'drawn' as const,
+          geometry: {
+            type: 'LineString' as const,
+            coordinates: offset.geometry.coordinates,
+          },
+          properties: {
+            ...line.properties,
+            offsetFrom: line.id,
+            offsetDistance: distance,
+            offsetSide: 'left',
+            offsetIndex: i,
+            plantingLine: true,
+          },
+        });
+      }
+    }
+
+    // Cria linhas à direita (distância negativa)
+    for (let i = 1; i <= config.rightCount; i++) {
+      const distance = -(config.distance * i);
+      const turfLine = turf.lineString(line.geometry.coordinates);
+      const offset = turf.lineOffset(turfLine, distance, { units: 'meters' });
+
+      if (offset && offset.geometry) {
+        results.push({
+          id: `offset-right-${i}-${timestamp}`,
+          type: 'drawn' as const,
+          geometry: {
+            type: 'LineString' as const,
+            coordinates: offset.geometry.coordinates,
+          },
+          properties: {
+            ...line.properties,
+            offsetFrom: line.id,
+            offsetDistance: distance,
+            offsetSide: 'right',
+            offsetIndex: i,
+            plantingLine: true,
+          },
+        });
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Erro ao criar offsets múltiplos:', error);
+    return [];
+  }
+};
+
+/**
  * Suaviza uma linha reduzindo o número de vértices
  * @param line Linha a ser suavizada
  * @param tolerance Tolerância de simplificação (menor = mais detalhes)

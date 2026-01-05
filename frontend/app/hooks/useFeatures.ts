@@ -25,10 +25,22 @@ export const useFeatures = ({
 
     updateMapSource(map, LAYER_IDS.LINES_SOURCE, features);
 
-    // Sempre ajusta o zoom quando há features, independente do estado anterior
+    // Só ajusta o zoom no upload inicial ou quando o uploadCounter muda
+    // Não ajusta quando adiciona features manualmente (offset, draw, etc)
+    if (features.length > 0 && !hasFitBoundsRef.current) {
+      fitMapToFeatures(map, features);
+      hasFitBoundsRef.current = true;
+    }
+  }, [features, hasFitBoundsRef, mapLoadedRef, mapRef]);
+
+  // Efeito separado para detectar uploads (quando uploadCounter muda)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoadedRef.current || uploadCounter === 0) return;
+
     if (features.length > 0) {
       fitMapToFeatures(map, features);
       hasFitBoundsRef.current = true;
     }
-  }, [features, uploadCounter]);
+  }, [uploadCounter, features, hasFitBoundsRef, mapLoadedRef, mapRef]);
 };

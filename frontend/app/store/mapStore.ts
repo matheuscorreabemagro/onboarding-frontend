@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Feature, MapMode } from '../types';
+import type { Feature, MapMode, PopupPosition } from '../types';
 
 export type ToolMode = 'draw' | 'snap' | 'split' | 'offset' | 'simplify' | null;
 
@@ -11,8 +11,7 @@ interface MapStore {
   error: string | null;
   mode: MapMode;
   activeTool: ToolMode;
-  offsetDistance: number;
-  simplifyTolerance: number;
+  popupPosition: PopupPosition | null;
   uploadCounter: number;
 
   // ações
@@ -27,8 +26,7 @@ interface MapStore {
   reset: () => void;
   getFeatureCount: () => number;
   setActiveTool: (tool: ToolMode) => void;
-  setOffsetDistance: (distance: number) => void;
-  setSimplifyTolerance: (tolerance: number) => void;
+  setPopupPosition: (position: PopupPosition | null) => void;
 }
 
 export const useMapStore = create<MapStore>((set, get) => ({
@@ -39,8 +37,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
   error: null,
   mode: 'idle',
   activeTool: null,
-  offsetDistance: 10,
-  simplifyTolerance: 0.01,
+  popupPosition: null,
   uploadCounter: 0,
 
   // ações
@@ -78,6 +75,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
       error: null,
       mode: 'idle',
       activeTool: null,
+      popupPosition: null,
       uploadCounter: 0,
     })),
 
@@ -85,9 +83,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
 
   setActiveTool: (tool: ToolMode) => set(() => ({ activeTool: tool })),
 
-  setOffsetDistance: (distance: number) => set(() => ({ offsetDistance: distance })),
-
-  setSimplifyTolerance: (tolerance: number) => set(() => ({ simplifyTolerance: tolerance })),
+  setPopupPosition: (position: PopupPosition | null) => set(() => ({ popupPosition: position })),
 }));
 
 export default useMapStore;

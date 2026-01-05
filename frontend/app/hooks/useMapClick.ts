@@ -17,14 +17,19 @@ export const useMapClick = ({ mapRef, mapLoadedRef }: UseMapClickProps) => {
       if (!mapLoadedRef.current || !map.getLayer(LAYER_IDS.LINES)) return;
 
       const handleClick = (e: mapboxgl.MapMouseEvent) => {
-        const features = map.queryRenderedFeatures(e.point, {
+        const mapFeatures = map.queryRenderedFeatures(e.point, {
           layers: [LAYER_IDS.LINES],
         });
 
-        const { activeTool, selectFeature } = useMapStore.getState();
+        const { activeTool, selectFeature, setPopupPosition } = useMapStore.getState();
 
-        if (!activeTool && features.length > 0) {
-          const featureId = features[0].properties?.id;
+        // Se há ferramenta offset ou simplify ativa, armazena posição do clique
+        if ((activeTool === 'offset' || activeTool === 'simplify') && mapFeatures.length > 0) {
+          const featureId = mapFeatures[0].properties?.id;
+          selectFeature(featureId);
+          setPopupPosition({ x: e.point.x, y: e.point.y });
+        } else if (!activeTool && mapFeatures.length > 0) {
+          const featureId = mapFeatures[0].properties?.id;
           selectFeature(featureId);
         } else if (!activeTool) {
           selectFeature(null);

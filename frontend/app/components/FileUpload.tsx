@@ -5,14 +5,16 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useMapStore } from '../store/mapStore';
 import Alert from './Alert';
 
-const FileUpload: React.FC = () => {
+interface FileUploadProps {
+  onClose?: () => void;
+}
+
+const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const setFeatures = useMapStore((s) => s.setFeatures);
   const setError = useMapStore((s) => s.setError);
   const error = useMapStore((s) => s.error);
-  const features = useMapStore((s) => s.features);
   const [dragActive, setDragActive] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   // Handler para processar o arquivo
   const handleFile = async (file: File) => {
@@ -93,7 +95,11 @@ const FileUpload: React.FC = () => {
       }));
 
       setFeatures(newFeatures);
-      setShowSuccess(true);
+      
+      // Fecha o modal imediatamente após upload bem-sucedido
+      if (onClose) {
+        onClose();
+      }
     } catch (e) {
       if (e instanceof SyntaxError) {
         setError('Erro ao processar arquivo: JSON inválido.');
@@ -106,7 +112,14 @@ const FileUpload: React.FC = () => {
 
   // Handler para input file
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = e.target.files;
+    
+    if (files && files.length > 1) {
+      setError('Apenas um arquivo por vez. Selecione apenas um arquivo GeoJSON.');
+      return;
+    }
+    
+    const file = files?.[0];
     if (file) handleFile(file);
   };
 
@@ -114,20 +127,17 @@ const FileUpload: React.FC = () => {
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragActive(false);
-    const file = e.dataTransfer.files?.[0];
+    
+    const files = e.dataTransfer.files;
+    
+    if (files.length > 1) {
+      setError('Apenas um arquivo por vez. Arraste ou selecione apenas um arquivo GeoJSON.');
+      return;
+    }
+    
+    const file = files[0];
     if (file) handleFile(file);
   };
-
-  // Auto-hide do alerta de sucesso após 5 segundos
-  useEffect(() => {
-    if (showSuccess) {
-      const timer = setTimeout(() => {
-        setShowSuccess(false);
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccess]);
 
   // Auto-hide do erro após 5 segundos
   useEffect(() => {
@@ -141,7 +151,7 @@ const FileUpload: React.FC = () => {
   }, [error, setError]);
 
   return (
-    <div className="fixed top-6 left-1/2 z-50 w-full max-w-md -translate-x-1/2 px-4">
+    <div className="w-full max-w-md">
       <div className="space-y-3">
         {/* Área de Upload */}
         <div
@@ -165,6 +175,7 @@ const FileUpload: React.FC = () => {
             accept=".geojson,application/geo+json,application/json"
             className="hidden"
             onChange={onChange}
+            multiple={false}
           />
 
           {/* Ícone de Upload */}
@@ -203,15 +214,6 @@ const FileUpload: React.FC = () => {
             <p className="mt-2 text-xs text-gray-400">Apenas arquivos .geojson com LineStrings</p>
           </div>
         </div>
-
-        {/* Alert de Sucesso */}
-        {showSuccess && !error && (
-          <Alert
-            type="success"
-            message={`${features.length} feature${features.length !== 1 ? 's' : ''} carregada${features.length !== 1 ? 's' : ''} com sucesso!`}
-            onClose={() => setShowSuccess(false)}
-          />
-        )}
 
         {/* Alert de Erro */}
         {error && <Alert type="error" message={error} onClose={() => setError(null)} />}

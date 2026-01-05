@@ -1,7 +1,8 @@
 'use client';
 
 import { useMapStore, type ToolMode } from '../store/mapStore';
-import Button from './Button';
+import { useState } from 'react';
+import FileUpload from './FileUpload';
 
 interface ToolButton {
   id: ToolMode;
@@ -16,6 +17,8 @@ export default function Toolbar() {
   const removeFeature = useMapStore((s) => s.removeFeature);
   const activeTool = useMapStore((s) => s.activeTool);
   const setActiveTool = useMapStore((s) => s.setActiveTool);
+  const setPopupPosition = useMapStore((s) => s.setPopupPosition);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const tools: ToolButton[] = [
     {
@@ -40,7 +43,7 @@ export default function Toolbar() {
       id: 'offset',
       icon: '↔️',
       label: 'Offset',
-      description: 'Criar linha paralela',
+      description: 'Criar linhas paralelas',
     },
     {
       id: 'simplify',
@@ -57,154 +60,149 @@ export default function Toolbar() {
   };
 
   const handleToolClick = (toolId: ToolMode) => {
-    // Lógica específica para cada ferramenta
-    switch (toolId) {
-      case 'draw':
-        // Desenho simples sem snap
-        if (activeTool === 'draw') {
-          setActiveTool(null);
-        } else {
-          setActiveTool('draw');
-        }
-        break;
+    if (toolId === 'split' && !selectedFeatureId) {
+      alert('Selecione uma linha primeiro');
+      return;
+    }
 
-      case 'snap':
-        // Desenho com snap ativado
-        if (activeTool === 'snap') {
-          setActiveTool(null);
-        } else {
-          setActiveTool('snap');
-        }
-        break;
+    if ((toolId === 'offset' || toolId === 'simplify') && !selectedFeatureId) {
+      alert('Selecione uma linha primeiro');
+      return;
+    }
 
-      case 'split':
-        // Split requer uma feature selecionada
-        if (!selectedFeatureId) {
-          alert('⚠️ Passo a passo para cortar:\n\n1. Clique em uma linha no mapa (ela ficará vermelha)\n2. Clique no botão Cortar ✂️\n3. Desenhe uma linha que cruze a linha selecionada\n4. Duplo clique para finalizar o corte');
-          return;
-        }
-        
-        if (activeTool === 'split') {
-          setActiveTool(null);
-        } else {
-          setActiveTool('split');
-        }
-        break;
-
-      case 'offset':
-      case 'simplify':
-        // Offset e Simplify executam imediatamente
-        if (activeTool === toolId) {
-          setActiveTool(null);
-        } else {
-          setActiveTool(toolId);
-        }
-        break;
-
-      default:
-        setActiveTool(null);
+    // Se offset/simplify e linha já selecionada, mostra popup imediatamente no centro
+    if ((toolId === 'offset' || toolId === 'simplify') && selectedFeatureId) {
+      setActiveTool(toolId);
+      setPopupPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    } else {
+      setActiveTool(activeTool === toolId ? null : toolId);
     }
   };
 
   return (
-    <div className="fixed top-6 right-6 z-60 flex flex-col gap-3 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl p-4 min-w-50">
-      {/* Título e Contador */}
-      <div className="border-b border-gray-200 pb-3">
-        <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
-          Controles
-        </h2>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-800">Total de linhas:</span>
-          <span className="text-lg font-bold text-blue-600">{features.length}</span>
-        </div>
-      </div>
-
-      {/* Ferramentas Geoespaciais */}
-      <div className="border-b border-gray-200 pb-3">
-        <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
-          Ferramentas
-        </h3>
-        <div className="grid grid-cols-3 gap-2">
-          {tools.map((tool) => {
-            const isActive = activeTool === tool.id;
-            const isDisabled =
-              (tool.id === 'split' || tool.id === 'offset' || tool.id === 'simplify') &&
-              !selectedFeatureId;
-
-            return (
-              <button
-                key={tool.id}
-                onClick={() => handleToolClick(tool.id)}
-                disabled={isDisabled}
-                className={`group relative rounded-lg px-2 py-3 text-sm font-medium transition-all ${
-                  isActive
-                    ? 'scale-105 bg-blue-500 text-white shadow-lg'
-                    : isDisabled
-                    ? 'cursor-not-allowed bg-gray-100 text-gray-400 opacity-50'
-                    : 'text-gray-800 hover:scale-105 hover:bg-gray-100 hover:shadow-md'
-                }`}
-                title={tool.description}
-              >
-                <span className="block text-2xl">{tool.icon}</span>
-                <span className="mt-1 block text-xs">{tool.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        {activeTool && (
-          <div className="mt-3 rounded-lg bg-blue-50 p-2">
-            <p className="text-xs font-semibold text-blue-900 mb-1">
-              {tools.find((t) => t.id === activeTool)?.label} Ativo
-            </p>
-            <p className="text-xs text-blue-700 leading-relaxed">
-              {activeTool === 'draw' && 'Clique no mapa • Duplo clique finaliza'}
-              {activeTool === 'snap' && (
-                <>
-                  🧲 Desenhe próximo aos vértices<br />
-                  Eles grudam automaticamente • Duplo clique finaliza
-                </>
-              )}
-              {activeTool === 'split' && 'Desenhe linha de corte • Duplo clique finaliza'}
-              {activeTool === 'offset' && 'Linha paralela será criada'}
-              {activeTool === 'simplify' && 'Geometria será suavizada'}
-            </p>
+    <>
+      <div className="fixed left-0 top-0 h-full w-16 bg-white border-r border-gray-200 shadow-lg flex flex-col items-center py-4 z-50">
+        {/* Logo/Título */}
+        <div className="mb-6 pb-4 border-b border-gray-200 w-full flex justify-center">
+          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
           </div>
-        )}
+        </div>
+
+        {/* Botão Upload */}
+        <div className="mb-2 w-full px-2">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="group relative w-12 h-12 rounded-lg transition-all bg-linear-to-br from-green-500 to-emerald-600 text-white hover:shadow-md hover:scale-105"
+            title="Upload GeoJSON"
+          >
+            <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <div className="absolute left-16 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+              Upload
+            </div>
+          </button>
+        </div>
+
+        <div className="w-full border-b border-gray-200 mb-2" />
+
+      {/* Ferramentas */}
+      <div className="flex-1 flex flex-col gap-1 w-full px-2">
+        {tools.map((tool) => {
+          const isActive = activeTool === tool.id;
+          const needsSelection = ['split', 'offset', 'simplify'].includes(tool.id as string);
+          const isDisabled = needsSelection && !selectedFeatureId;
+
+          return (
+            <button
+              key={tool.id}
+              onClick={() => handleToolClick(tool.id)}
+              disabled={isDisabled}
+              className={`group relative w-12 h-12 rounded-lg transition-all ${
+                isActive
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : isDisabled
+                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              title={tool.description}
+            >
+              {tool.id === 'draw' && (
+                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              )}
+              {tool.id === 'snap' && (
+                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+              )}
+              {tool.id === 'split' && (
+                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                </svg>
+              )}
+              {tool.id === 'offset' && (
+                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              )}
+              {tool.id === 'simplify' && (
+                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343" />
+                </svg>
+              )}
+              
+              {/* Tooltip */}
+              <div className="absolute left-16 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                {tool.label}
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Botões de Ação */}
-      <div className="space-y-2">
-        {/* Botão Remover (só aparece quando há seleção) */}
-        {selectedFeatureId && !activeTool && (
-          <Button variant="danger" onClick={handleRemove} className="w-full">
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Remover Linha
-            </span>
-          </Button>
+      {/* Contador de linhas */}
+      <div className="mt-auto pt-4 border-t border-gray-200 w-full px-2">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600">{features.length}</div>
+          <div className="text-xs text-gray-500 mt-1">linhas</div>
+        </div>
+        
+        {/* Botão Remover */}
+        {selectedFeatureId && (
+          <button
+            onClick={handleRemove}
+            className="mt-3 w-12 h-12 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+            title="Remover linha selecionada"
+          >
+            <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         )}
       </div>
-
-      {/* Dica visual do estado */}
-      {selectedFeatureId && !activeTool && (
-        <div className="mt-2 p-3 bg-red-50 rounded-lg border-2 border-red-400">
-          <p className="text-sm font-bold text-red-700 text-center mb-1">
-            ✅ LINHA SELECIONADA (Vermelha)
-          </p>
-          <p className="text-xs text-red-600 text-center">
-            Agora você pode usar: Cortar ✂️, Offset ↔️ ou Suavizar 〰️
-          </p>
-        </div>
-      )}
-      {!selectedFeatureId && !activeTool && features.length > 0 && (
-        <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-xs text-blue-700 text-center">
-            💡 Clique em uma linha no mapa para selecioná-la
-          </p>
-        </div>
-      )}
     </div>
+
+    {/* Modal de Upload */}
+    {showUploadModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60" onClick={() => setShowUploadModal(false)}>
+        <div className="relative" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => setShowUploadModal(false)}
+            className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <FileUpload onClose={() => setShowUploadModal(false)} />
+        </div>
+      </div>
+    )}
+  </>
   );
 }

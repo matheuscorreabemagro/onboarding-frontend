@@ -15,6 +15,9 @@ import { useMapClick } from '../hooks/useMapClick';
 import { useKeyboardEvents } from '../hooks/useKeyboardEvents';
 import { useCursor } from '../hooks/useCursor';
 import { useFeatures } from '../hooks/useFeatures';
+import FieldOffsetPopup from './FieldOffsetPopup';
+import SimplifyPopup from './SimplifyPopup';
+import { createMultipleOffsets, smoothLine } from '../utils/turfOperations';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
@@ -30,6 +33,65 @@ const MapComponent: React.FC = () => {
   const hoveredFeatureId = useMapStore((state) => state.hoveredFeatureId);
   const activeTool = useMapStore((state) => state.activeTool);
   const uploadCounter = useMapStore((state) => state.uploadCounter);
+  const popupPosition = useMapStore((state) => state.popupPosition);
+  const setPopupPosition = useMapStore((state) => state.setPopupPosition);
+  const setActiveTool = useMapStore((state) => state.setActiveTool);
+  const addFeature = useMapStore((state) => state.addFeature);
+  const removeFeature = useMapStore((state) => state.removeFeature);
+
+  const handleOffsetApply = (config: { direction: 'left' | 'right' | 'both'; distance: number; count: number }) => {
+    if (!selectedFeatureId) return;
+    
+    const selectedFeature = features.find((f) => f.id === selectedFeatureId);
+    if (!selectedFeature) return;
+
+    const leftCount = config.direction === 'right' ? 0 : config.count;
+    const rightCount = config.direction === 'left' ? 0 : config.count;
+
+    const offsetResults = createMultipleOffsets(selectedFeature, {
+      distance: config.distance,
+      leftCount,
+      rightCount,
+    });
+
+    if (offsetResults.length > 0) {
+      offsetResults.forEach((line) => addFeature(line));
+      
+      // Zoom na área
+      const map = mapRef.current;
+      if (map) {
+        const allLines = [selectedFeature, ...offsetResults];
+        const bounds = new mapboxgl.LngLatBounds();
+        allLines.forEach((feature) => {
+          feature.geometry.coordinates.forEach((coord) => {
+            bounds.extend(coord as [number, number]);
+          });
+        });
+        map.fitBounds(bounds, { padding: 50, duration: 600 });
+      }
+    }
+    
+    setPopupPosition(null);
+    setActiveTool(null);
+  };
+
+  const handleSimplifyApply = (level: 'low' | 'medium' | 'high') => {
+    if (!selectedFeatureId) return;
+    
+    const selectedFeature = features.find((f) => f.id === selectedFeatureId);
+    if (!selectedFeature) return;
+
+    const resolution = level === 'low' ? 10000 : level === 'medium' ? 5000 : 2000;
+    
+    const smoothResult = smoothLine(selectedFeature, resolution);
+    if (smoothResult) {
+      removeFeature(selectedFeatureId);
+      addFeature(smoothResult);
+    }
+    
+    setPopupPosition(null);
+    setActiveTool(null);
+  };
 
   useMapInitialization({
     containerRef: mapContainerRef,
@@ -50,7 +112,32 @@ const MapComponent: React.FC = () => {
   useFeatures({ mapRef, mapLoadedRef, hasFitBoundsRef, features, uploadCounter });
 
   return (
-    <div ref={mapContainerRef} style={{ width: '100vw', height: '100vh' }} className="relative" />
+    <>
+      <div ref={mapContainerRef} style={{ width: '100vw', height: '100vh' }} className="relative" />
+      
+      {/* Popups aparecem quando ferramenta está ativa E linha selecionada */}
+      {activeTool === 'offset' && popupPosition && selectedFeatureId && (
+        <FieldOffsetPopup
+          position={popupPosition}
+          onApply={handleOffsetApply}
+          onClose={() => {
+            setPopupPosition(null);
+            setActiveTool(null);
+          }}
+        />
+      )}
+      
+      {activeTool === 'simplify' && popupPosition && selectedFeatureId && (
+        <SimplifyPopup
+          position={popupPosition}
+          onApply={handleSimplifyApply}
+          onClose={() => {
+            setPopupPosition(null);
+            setActiveTool(null);
+          }}
+        />
+      )}
+    </>
   );
 };
 
