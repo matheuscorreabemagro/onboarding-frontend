@@ -24,14 +24,23 @@ export const useMapTools = ({
 }: UseMapToolsProps) => {
   useEffect(() => {
     const draw = drawRef.current;
-    if (!draw || !mapLoadedRef.current) return;
+    const map = mapRef.current;
+    if (!draw || !map || !mapLoadedRef.current) return;
 
     switch (activeTool) {
       case 'draw':
+        // Garante que o Draw está no mapa antes de mudar o modo
+        if (!map.hasControl(draw)) {
+          map.addControl(draw);
+        }
         draw.changeMode(DRAW_MODES.DRAW_LINE);
         break;
 
       case 'snap':
+        // Garante que o Draw está no mapa antes de mudar o modo
+        if (!map.hasControl(draw)) {
+          map.addControl(draw);
+        }
         draw.deleteAll();
         features.forEach((feature) => {
           const featureToAdd = {
