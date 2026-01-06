@@ -264,7 +264,7 @@ describe('geojsonValidator - parseGeoJSON', () => {
     expect(result[0]).toEqual(feature);
   });
 
-  it('deve filtrar apenas LineStrings', () => {
+  it('deve aceitar todos os tipos de geometria (agora suporta Point, LineString, Polygon, etc)', () => {
     const fc = {
       type: 'FeatureCollection',
       features: [
@@ -289,7 +289,7 @@ describe('geojsonValidator - parseGeoJSON', () => {
 
     const result = parseGeoJSON(fc);
 
-    expect(result).toHaveLength(1); // Apenas LineString
+    expect(result).toHaveLength(2); // Aceita LineString e Point
   });
 
   it('deve retornar array vazio para dados inválidos', () => {

@@ -3,6 +3,7 @@
 import { useMapStore, type ToolMode } from '../store/mapStore';
 import { useState } from 'react';
 import FileUpload from './FileUpload';
+import { isLineGeometry, isPolygonGeometry } from '../utils/turfOperations';
 
 /**
  * Constante para posição central do popup
@@ -20,13 +21,26 @@ interface ToolButton {
 }
 
 export default function Toolbar() {
-  const features = useMapStore((s) => s.features);
+  const layers = useMapStore((s) => s.layers);
+  const activeLayerId = useMapStore((s) => s.activeLayerId);
   const selectedFeatureId = useMapStore((s) => s.selectedFeatureId);
-  const removeFeature = useMapStore((s) => s.removeFeature);
+  const removeFeatureFromActiveLayer = useMapStore((s) => s.removeFeatureFromActiveLayer);
   const activeTool = useMapStore((s) => s.activeTool);
   const setActiveTool = useMapStore((s) => s.setActiveTool);
   const setPopupPosition = useMapStore((s) => s.setPopupPosition);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  
+  // Pega features da camada ativa
+  const activeLayer = layers.find(l => l.id === activeLayerId);
+  const features = activeLayer?.features || [];
+  
+  // Pega a feature selecionada
+  const selectedFeature = features.find(f => f.id === selectedFeatureId);
+  
+  // Determina quais ferramentas são válidas para a geometria selecionada
+  const canSplit = selectedFeature ? isLineGeometry(selectedFeature) : false;
+  const canOffset = selectedFeature ? isLineGeometry(selectedFeature) : false;
+  const canSimplify = selectedFeature ? (isLineGeometry(selectedFeature) || isPolygonGeometry(selectedFeature)) : false;
 
   const tools: ToolButton[] = [
     {
@@ -63,22 +77,33 @@ export default function Toolbar() {
 
   const handleRemove = () => {
     if (selectedFeatureId) {
-      removeFeature(selectedFeatureId);
+      removeFeatureFromActiveLayer(selectedFeatureId);
     }
   };
 
   const handleToolClick = (toolId: ToolMode) => {
-    if (toolId === 'split' && !selectedFeatureId) {
-      alert('Selecione uma linha primeiro');
+    // Verifica se a ferramenta é suportada pela geometria selecionada
+    if (toolId === 'split' && !canSplit) {
+      alert('A ferramenta Cortar funciona apenas com LineString');
       return;
     }
-
+    if (toolId === 'offset' && !canOffset) {
+      alert('A ferramenta Offset funciona apenas com LineString');
+      return;
+    }
+    if (toolId === 'simplify' && !canSimplify) {
+      alert('A ferramenta Suavizar funciona apenas com LineString e Polygon');
+      return;
+    }
+    
+    // Split permite ativar primeiro e selecionar depois
+    // Offset e Simplify precisam de seleção prévia
     if ((toolId === 'offset' || toolId === 'simplify') && !selectedFeatureId) {
-      alert('Selecione uma linha primeiro');
+      alert('Selecione uma geometria primeiro');
       return;
     }
 
-    // Se offset/simplify e linha já selecionada, mostra popup imediatamente no centro
+    // Se offset/simplify e geometria já selecionada, mostra popup imediatamente no centro
     if ((toolId === 'offset' || toolId === 'simplify') && selectedFeatureId) {
       setActiveTool(toolId);
       setPopupPosition({ x: POPUP_CENTER_POSITION.getX(), y: POPUP_CENTER_POSITION.getY() });
@@ -123,7 +148,24 @@ export default function Toolbar() {
         {tools.map((tool) => {
           const isActive = activeTool === tool.id;
           const needsSelection = ['split', 'offset', 'simplify'].includes(tool.id as string);
-          const isDisabled = needsSelection && !selectedFeatureId;
+          
+          // Determina se a ferramenta está desabilitada
+          let isDisabled = false;
+          let disabledReason = '';
+          
+          if (tool.id === 'split') {
+            isDisabled = needsSelection && (!selectedFeatureId || !canSplit);
+            if (!selectedFeatureId) disabledReason = 'Selecione uma linha';
+            else if (!canSplit) disabledReason = 'Apenas para LineString';
+          } else if (tool.id === 'offset') {
+            isDisabled = needsSelection && (!selectedFeatureId || !canOffset);
+            if (!selectedFeatureId) disabledReason = 'Selecione uma linha';
+            else if (!canOffset) disabledReason = 'Apenas para LineString';
+          } else if (tool.id === 'simplify') {
+            isDisabled = needsSelection && (!selectedFeatureId || !canSimplify);
+            if (!selectedFeatureId) disabledReason = 'Selecione uma geometria';
+            else if (!canSimplify) disabledReason = 'Apenas para LineString/Polygon';
+          }
 
           return (
             <button
@@ -137,7 +179,7 @@ export default function Toolbar() {
                   ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               }`}
-              title={tool.description}
+              title={isDisabled ? disabledReason : tool.description}
             >
               {tool.id === 'draw' && (
                 <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">

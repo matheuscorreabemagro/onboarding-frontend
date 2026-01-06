@@ -1,7 +1,6 @@
 import { useEffect, RefObject } from 'react';
-import mapboxgl from 'mapbox-gl';
 import { useMapStore } from '../store/mapStore';
-import { LAYER_IDS, CURSORS } from '../constants/map';
+import { CURSORS } from '../constants/map';
 
 interface UseMapInteractionsProps {
   mapRef: RefObject<mapboxgl.Map | null>;
@@ -17,17 +16,34 @@ export const useMapInteractions = ({
     if (!map) return;
 
     const setupHoverHandlers = () => {
-      if (!mapLoadedRef.current || !map.getLayer(LAYER_IDS.LINES)) return;
+      if (!mapLoadedRef.current) return;
 
       const handleMouseMove = (e: mapboxgl.MapMouseEvent) => {
+        const { activeLayerId } = useMapStore.getState();
+        
+        // Se não há camada ativa, não faz nada
+        if (!activeLayerId) return;
+        
+        const activeLayerPrefix = `layer-${activeLayerId}`;
+        
+        // Lista todas as possíveis layers da camada ativa (fill, line, point, etc)
+        const possibleLayers = [
+          `${activeLayerPrefix}-fill`,
+          `${activeLayerPrefix}-line`,
+          `${activeLayerPrefix}-point`,
+          `${activeLayerPrefix}-outline`,
+        ].filter(layerId => map.getLayer(layerId));
+        
+        if (possibleLayers.length === 0) return;
+        
         const features = map.queryRenderedFeatures(e.point, {
-          layers: [LAYER_IDS.LINES],
+          layers: possibleLayers,
         });
 
         const currentActiveTool = useMapStore.getState().activeTool;
 
         if (features.length > 0) {
-          const featureId = features[0].properties?.id;
+          const featureId = features[0].properties?.originalId;
           useMapStore.getState().setHoveredFeatureId(featureId);
           map.getCanvas().style.cursor = CURSORS.POINTER;
         } else {
@@ -43,9 +59,9 @@ export const useMapInteractions = ({
       };
 
       map.off('mousemove', handleMouseMove);
-      map.off('mouseleave', LAYER_IDS.LINES, handleMouseLeave);
+      map.off('mouseleave', handleMouseLeave);
       map.on('mousemove', handleMouseMove);
-      map.on('mouseleave', LAYER_IDS.LINES, handleMouseLeave);
+      map.on('mouseleave', handleMouseLeave);
     };
 
     if (mapLoadedRef.current) {

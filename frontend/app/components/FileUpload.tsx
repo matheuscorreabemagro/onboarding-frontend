@@ -13,7 +13,7 @@ interface FileUploadProps {
 
 const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const setFeatures = useMapStore((s) => s.setFeatures);
+  const addLayer = useMapStore((s) => s.addLayer);
   const setError = useMapStore((s) => s.setError);
   const error = useMapStore((s) => s.error);
   const [dragActive, setDragActive] = useState(false);
@@ -30,44 +30,23 @@ const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
         return;
       }
 
-      let lineFeatures: GeoJSONFeature[] = [];
+      let features: GeoJSONFeature[] = [];
 
-      // Se for FeatureCollection, filtra LineStrings
+      // Se for FeatureCollection, aceita todas as geometrias
       if (data.type === 'FeatureCollection') {
-        const totalFeatures = data.features.length;
-        lineFeatures = data.features.filter((f: { geometry?: { type: string } }) => f.geometry?.type === 'LineString');
+        features = data.features.filter((f: { geometry?: { type: string } }) => f.geometry?.type);
 
-        if (lineFeatures.length === 0) {
-          const otherTypes = data.features
-            .map((f: { geometry?: { type: string } }) => f.geometry?.type)
-            .filter((t: string | undefined) => t && t !== 'LineString')
-            .join(', ');
-
-          if (otherTypes) {
-            setError(
-              `GeoJSON não contém linhas (LineString). Esta aplicação trabalha apenas com linhas.`
-            );
-          } else {
-            setError('GeoJSON não contém nenhuma geometria válida.');
-          }
+        if (features.length === 0) {
+          setError('GeoJSON não contém nenhuma geometria válida.');
           return;
-        }
-
-        // Informa se filtrou algumas features
-        if (lineFeatures.length < totalFeatures) {
-          logger.warn(
-            `⚠️ ${totalFeatures - lineFeatures.length} feature(s) ignorada(s) (apenas LineStrings são suportadas)`
-          );
         }
       }
       // Se for Feature única
       else if (data.type === 'Feature') {
-        if (data.geometry?.type === 'LineString') {
-          lineFeatures = [data];
+        if (data.geometry?.type) {
+          features = [data];
         } else {
-          setError(
-            `Geometria tipo "${data.geometry?.type}" não é suportada. Esta aplicação trabalha apenas com linhas (LineString).`
-          );
+          setError('Feature não contém uma geometria válida.');
           return;
         }
       } else {
@@ -76,17 +55,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
       }
 
       // Converte para o formato do store
-      const newFeatures = lineFeatures.map((f: GeoJSONFeature, i: number) => ({
+      const newFeatures = features.map((f: GeoJSONFeature, i: number) => ({
         id: f.id ? String(f.id) : `uploaded-${Date.now()}-${i}`,
         type: 'uploaded' as const,
-        geometry: {
-          type: 'LineString' as const,
-          coordinates: f.geometry.coordinates,
-        },
+        geometry: f.geometry as any,
         properties: f.properties || {},
       }));
 
-      setFeatures(newFeatures);
+      // Cria nova camada com o nome do arquivo
+      addLayer(file.name, newFeatures);
       
       // Fecha o modal imediatamente após upload bem-sucedido
       if (onClose) {
@@ -203,7 +180,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
               </span>
               {' ou arraste o arquivo'}
             </p>
-            <p className="mt-2 text-xs text-gray-400">Apenas arquivos .geojson com LineStrings</p>
+            <p className="mt-2 text-xs text-gray-400">Arquivos .geojson com qualquer tipo de geometria</p>
           </div>
         </div>
 

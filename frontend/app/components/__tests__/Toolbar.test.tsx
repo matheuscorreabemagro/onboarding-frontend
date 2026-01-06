@@ -6,6 +6,13 @@ import type { Feature } from '../../types';
 // Mock do store
 jest.mock('../../store/mapStore');
 
+// Mock do turfOperations
+jest.mock('../../utils/turfOperations', () => ({
+  isLineGeometry: jest.fn((feature: Feature) => feature.geometry.type === 'LineString'),
+  isPolygonGeometry: jest.fn((feature: Feature) => feature.geometry.type === 'Polygon'),
+  isPointGeometry: jest.fn((feature: Feature) => feature.geometry.type === 'Point'),
+}));
+
 // Mock do FileUpload
 jest.mock('../FileUpload', () => {
   return function MockFileUpload({ onClose }: { onClose?: () => void }) {
@@ -19,19 +26,51 @@ jest.mock('../FileUpload', () => {
 
 describe('Toolbar', () => {
   const mockSetActiveTool = jest.fn();
-  const mockRemoveFeature = jest.fn();
+  const mockRemoveFeatureFromActiveLayer = jest.fn();
   const mockSetPopupPosition = jest.fn();
+  
+  const mockEmptyLayer = {
+    id: 'layer-1',
+    name: 'Camada 1',
+    features: [],
+    isActive: true,
+    isVisible: true,
+    color: '#3B82F6',
+    opacity: 1,
+    zIndex: 0,
+    createdAt: new Date(),
+  };
+  
+  const mockLayerWithFeatures = {
+    id: 'layer-1',
+    name: 'Camada 1',
+    features: [
+      {
+        id: 'line-1',
+        type: 'drawn' as const,
+        geometry: { type: 'LineString' as const, coordinates: [[0, 0], [1, 1]] },
+        properties: {},
+      },
+    ],
+    isActive: true,
+    isVisible: true,
+    color: '#3B82F6',
+    opacity: 1,
+    zIndex: 0,
+    createdAt: new Date(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
       const state = {
-        features: [],
+        layers: [mockEmptyLayer],
+        activeLayerId: 'layer-1',
         selectedFeatureId: null,
         activeTool: null,
         setActiveTool: mockSetActiveTool,
-        removeFeature: mockRemoveFeature,
+        removeFeatureFromActiveLayer: mockRemoveFeatureFromActiveLayer,
         setPopupPosition: mockSetPopupPosition,
       };
       return selector(state);
@@ -66,14 +105,20 @@ describe('Toolbar', () => {
           properties: {},
         },
       ];
+      
+      const mockLayerWithFeatures = {
+        ...mockEmptyLayer,
+        features: mockFeatures,
+      };
 
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
-          features: mockFeatures,
+          layers: [mockLayerWithFeatures],
+          activeLayerId: 'layer-1',
           selectedFeatureId: null,
           activeTool: null,
           setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
+          removeFeatureFromActiveLayer: mockRemoveFeatureFromActiveLayer,
           setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
@@ -151,11 +196,12 @@ describe('Toolbar', () => {
     it('deve desativar ferramenta ao clicar novamente', () => {
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
-          features: [],
+          layers: [mockEmptyLayer],
+          activeLayerId: 'layer-1',
           selectedFeatureId: null,
           activeTool: 'draw',
           setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
+          removeFeatureFromActiveLayer: mockRemoveFeatureFromActiveLayer,
           setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
@@ -181,11 +227,12 @@ describe('Toolbar', () => {
     it('deve aplicar estilo ativo quando ferramenta está selecionada', () => {
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
-          features: [],
+          layers: [mockEmptyLayer],
+          activeLayerId: 'layer-1',
           selectedFeatureId: null,
           activeTool: 'draw',
           setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
+          removeFeatureFromActiveLayer: mockRemoveFeatureFromActiveLayer,
           setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
@@ -202,7 +249,7 @@ describe('Toolbar', () => {
     it('deve desabilitar botão Cortar sem seleção', () => {
       render(<Toolbar />);
 
-      const splitButton = screen.getByTitle('Dividir linha existente');
+      const splitButton = screen.getByText('Cortar').closest('button');
       expect(splitButton).toBeDisabled();
       expect(splitButton).toHaveClass('cursor-not-allowed');
     });
@@ -210,32 +257,26 @@ describe('Toolbar', () => {
     it('deve desabilitar botão Offset sem seleção', () => {
       render(<Toolbar />);
 
-      const offsetButton = screen.getByTitle('Criar linhas paralelas');
+      const offsetButton = screen.getByText('Offset').closest('button');
       expect(offsetButton).toBeDisabled();
     });
 
     it('deve desabilitar botão Suavizar sem seleção', () => {
       render(<Toolbar />);
 
-      const simplifyButton = screen.getByTitle('Suavizar geometria');
+      const simplifyButton = screen.getByText('Suavizar').closest('button');
       expect(simplifyButton).toBeDisabled();
     });
 
     it('deve habilitar ferramentas quando linha está selecionada', () => {
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
-          features: [
-            {
-              id: 'line-1',
-              type: 'drawn',
-              geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
-              properties: {},
-            },
-          ],
+          layers: [mockLayerWithFeatures],
+          activeLayerId: 'layer-1',
           selectedFeatureId: 'line-1',
           activeTool: null,
           setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
+          removeFeatureFromActiveLayer: mockRemoveFeatureFromActiveLayer,
           setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
@@ -255,11 +296,12 @@ describe('Toolbar', () => {
     it('deve chamar setPopupPosition ao clicar em offset com linha selecionada', () => {
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
-          features: [{ id: 'line-1', type: 'drawn', geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] }, properties: {} }],
+          layers: [mockLayerWithFeatures],
+          activeLayerId: 'layer-1',
           selectedFeatureId: 'line-1',
           activeTool: null,
           setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
+          removeFeatureFromActiveLayer: mockRemoveFeatureFromActiveLayer,
           setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
@@ -286,18 +328,12 @@ describe('Toolbar', () => {
     it('deve mostrar botão remover quando linha está selecionada', () => {
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
-          features: [
-            {
-              id: 'line-1',
-              type: 'drawn',
-              geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
-              properties: {},
-            },
-          ],
+          layers: [mockLayerWithFeatures],
+          activeLayerId: 'layer-1',
           selectedFeatureId: 'line-1',
           activeTool: null,
           setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
+          removeFeatureFromActiveLayer: mockRemoveFeatureFromActiveLayer,
           setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
@@ -312,18 +348,12 @@ describe('Toolbar', () => {
     it('deve chamar removeFeature ao clicar no botão', () => {
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
-          features: [
-            {
-              id: 'line-1',
-              type: 'drawn',
-              geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
-              properties: {},
-            },
-          ],
+          layers: [mockLayerWithFeatures],
+          activeLayerId: 'layer-1',
           selectedFeatureId: 'line-1',
           activeTool: null,
           setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
+          removeFeatureFromActiveLayer: mockRemoveFeatureFromActiveLayer,
           setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);
@@ -334,17 +364,18 @@ describe('Toolbar', () => {
       const removeButton = screen.getByRole('button', { name: /remover linha selecionada do mapa/i });
       fireEvent.click(removeButton);
 
-      expect(mockRemoveFeature).toHaveBeenCalledWith('line-1');
+      expect(mockRemoveFeatureFromActiveLayer).toHaveBeenCalledWith('line-1');
     });
 
     it('botão remover deve ter estilo vermelho', () => {
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
-          features: [{ id: 'line-1', type: 'drawn', geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] }, properties: {} }],
+          layers: [mockLayerWithFeatures],
+          activeLayerId: 'layer-1',
           selectedFeatureId: 'line-1',
           activeTool: null,
           setActiveTool: mockSetActiveTool,
-          removeFeature: mockRemoveFeature,
+          removeFeatureFromActiveLayer: mockRemoveFeatureFromActiveLayer,
           setPopupPosition: mockSetPopupPosition,
         };
         return selector(state);

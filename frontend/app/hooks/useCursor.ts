@@ -1,5 +1,4 @@
 import { useEffect, RefObject } from 'react';
-import mapboxgl from 'mapbox-gl';
 import { CURSORS } from '../constants/map';
 import type { ToolMode } from '../store/mapStore';
 
@@ -16,5 +15,5 @@ export const useCursor = ({ mapRef, activeTool }: UseCursorProps) => {
     const canvas = map.getCanvas();
     const isDrawingTool = activeTool === 'draw' || activeTool === 'snap' || activeTool === 'split';
     canvas.style.cursor = isDrawingTool ? CURSORS.CROSSHAIR : CURSORS.DEFAULT;
-  }, [activeTool]);
+  }, [activeTool, mapRef]);
 };

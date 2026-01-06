@@ -6,7 +6,7 @@ import { useMapStore } from '../../store/mapStore';
 jest.mock('../../store/mapStore');
 
 describe('FileUpload', () => {
-  const mockSetFeatures = jest.fn();
+  const mockAddLayer = jest.fn();
   const mockSetError = jest.fn();
 
   beforeEach(() => {
@@ -14,9 +14,9 @@ describe('FileUpload', () => {
 
     (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
       const state = {
-        features: [],
+        layers: [],
         error: null,
-        setFeatures: mockSetFeatures,
+        addLayer: mockAddLayer,
         setError: mockSetError,
       };
       return selector(state);
@@ -74,7 +74,7 @@ describe('FileUpload', () => {
 
         await waitFor(() => {
           expect(mockSetError).toHaveBeenCalledWith(null);
-          expect(mockSetFeatures).toHaveBeenCalled();
+          expect(mockAddLayer).toHaveBeenCalled();
         });
       }
     });
@@ -105,7 +105,7 @@ describe('FileUpload', () => {
         fireEvent.change(input);
 
         await waitFor(() => {
-          expect(mockSetFeatures).toHaveBeenCalled();
+          expect(mockAddLayer).toHaveBeenCalled();
         });
       }
     });
@@ -141,9 +141,9 @@ describe('FileUpload', () => {
         fireEvent.change(input);
 
         await waitFor(() => {
-          const calls = mockSetFeatures.mock.calls;
+          const calls = mockAddLayer.mock.calls;
           if (calls.length > 0) {
-            const features = calls[0][0];
+            const features = calls[0][1];
             expect(features[0].id).toMatch(/^uploaded-\d+-0$/);
           }
         });
@@ -175,7 +175,7 @@ describe('FileUpload', () => {
       }
     });
 
-    it('deve rejeitar GeoJSON sem LineStrings', async () => {
+    it('deve aceitar GeoJSON com Points (agora suporta todos os tipos)', async () => {
       const pointGeoJSON = {
         type: 'FeatureCollection',
         features: [
@@ -206,14 +206,12 @@ describe('FileUpload', () => {
         fireEvent.change(input);
 
         await waitFor(() => {
-          expect(mockSetError).toHaveBeenCalledWith(
-            expect.stringMatching(/não contém linhas|não contém nenhuma geometria válida/i)
-          );
+          expect(mockAddLayer).toHaveBeenCalled();
         });
       }
     });
 
-    it('deve rejeitar Feature com geometria não LineString', async () => {
+    it('deve aceitar Feature com geometria Polygon (agora suporta todos os tipos)', async () => {
       const polygonFeature = {
         type: 'Feature',
         geometry: {
@@ -239,9 +237,7 @@ describe('FileUpload', () => {
         fireEvent.change(input);
 
         await waitFor(() => {
-          expect(mockSetError).toHaveBeenCalledWith(
-            expect.stringMatching(/não é suportada|não é um GeoJSON válido/i)
-          );
+          expect(mockAddLayer).toHaveBeenCalled();
         });
       }
     });
@@ -276,9 +272,9 @@ describe('FileUpload', () => {
     it('deve exibir mensagem de erro quando houver erro', () => {
       (useMapStore as unknown as jest.Mock).mockImplementation((selector) => {
         const state = {
-          features: [],
+          layers: [],
           error: 'Arquivo inválido',
-          setFeatures: mockSetFeatures,
+          addLayer: mockAddLayer,
           setError: mockSetError,
         };
         return selector(state);
@@ -345,9 +341,9 @@ describe('FileUpload', () => {
         fireEvent.change(input);
 
         await waitFor(() => {
-          const calls = mockSetFeatures.mock.calls;
+          const calls = mockAddLayer.mock.calls;
           if (calls.length > 0) {
-            const features = calls[0][0];
+            const features = calls[0][1];
             expect(features).toHaveLength(2); // Apenas 2 LineStrings
           }
         });
@@ -392,9 +388,9 @@ describe('FileUpload', () => {
         fireEvent.change(input);
 
         await waitFor(() => {
-          const calls = mockSetFeatures.mock.calls;
+          const calls = mockAddLayer.mock.calls;
           if (calls.length > 0) {
-            const features = calls[0][0];
+            const features = calls[0][1];
             expect(features[0].properties.name).toBe('Test Line');
             expect(features[0].properties.color).toBe('blue');
             expect(features[0].properties.width).toBe(5);

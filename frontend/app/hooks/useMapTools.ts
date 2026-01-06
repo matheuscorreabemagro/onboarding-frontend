@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 
 interface UseMapToolsProps {
   drawRef: RefObject<MapboxDraw | null>;
+  mapRef: RefObject<mapboxgl.Map | null>;
   mapLoadedRef: RefObject<boolean>;
   activeTool: ToolMode;
   features: Feature[];
@@ -15,6 +16,7 @@ interface UseMapToolsProps {
 
 export const useMapTools = ({
   drawRef,
+  mapRef,
   mapLoadedRef,
   activeTool,
   features,
@@ -50,18 +52,41 @@ export const useMapTools = ({
         break;
 
       case 'split':
+        // Para split, comportamento depende se já tem feature selecionada
         if (selectedFeatureId) {
+          // Reativa o Draw se foi removido
+          const map = mapRef.current;
+          if (map && !map.hasControl(draw)) {
+            map.addControl(draw);
+          }
+          draw.deleteAll();
           draw.changeMode(DRAW_MODES.DRAW_LINE);
+        } else {
+          // Remove o Draw completamente do mapa para não bloquear cliques
+          const map = mapRef.current;
+          if (map && map.hasControl(draw)) {
+            map.removeControl(draw);
+          }
         }
         break;
 
       case null:
+        // Garante que o Draw está no mapa
+        const mapForNull = mapRef.current;
+        if (mapForNull && !mapForNull.hasControl(draw)) {
+          mapForNull.addControl(draw);
+        }
         draw.deleteAll();
         draw.changeMode(DRAW_MODES.SIMPLE_SELECT);
         break;
 
       default:
         if (activeTool === undefined) {
+          // Garante que o Draw está no mapa
+          const mapForUndefined = mapRef.current;
+          if (mapForUndefined && !mapForUndefined.hasControl(draw)) {
+            mapForUndefined.addControl(draw);
+          }
           draw.deleteAll();
           draw.changeMode(DRAW_MODES.SIMPLE_SELECT);
         }

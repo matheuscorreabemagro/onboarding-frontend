@@ -16,12 +16,25 @@ interface DrawCreateEvent {
 
 export const handleDrawCreate = (e: DrawCreateEvent, draw: { deleteAll: () => void }): void => {
   const feature = e.features[0];
-  const { activeTool, selectedFeatureId, features, addFeature, removeFeature, setActiveTool, setError } = useMapStore.getState();
+  const { activeTool, selectedFeatureId, layers, activeLayerId, addLayer, addFeatureToActiveLayer, removeFeatureFromActiveLayer, setActiveTool, setError } = useMapStore.getState();
+  
+  // Se não há camada ativa, cria uma nova camada automaticamente
+  if (!activeLayerId || layers.length === 0) {
+    const newFeature = createFeatureFromDraw(feature.geometry.coordinates);
+    addLayer('Desenho', [newFeature]);
+    setActiveTool(null);
+    draw.deleteAll();
+    return;
+  }
+  
+  // Pega features da camada ativa
+  const activeLayer = layers.find(l => l.id === activeLayerId);
+  const features = activeLayer?.features || [];
 
   if (activeTool === 'split' && selectedFeatureId) {
-    handleSplitOperation(feature, selectedFeatureId, features, removeFeature, addFeature, setError, setActiveTool);
+    handleSplitOperation(feature, selectedFeatureId, features, removeFeatureFromActiveLayer, addFeatureToActiveLayer, setError, setActiveTool);
   } else {
-    handleDrawOperation(feature, addFeature, setActiveTool);
+    handleDrawOperation(feature, addFeatureToActiveLayer, setActiveTool);
   }
   
   draw.deleteAll();
@@ -37,6 +50,11 @@ const handleSplitOperation = (
   setActiveTool: (tool: null) => void
 ): void => {
   const targetFeature = features.find((f) => f.id === selectedFeatureId);
+  
+  if (!targetFeature) {
+    setError('Feature selecionada não encontrada na camada ativa.');
+    return;
+  }
   
   if (targetFeature && feature.geometry.type === 'LineString') {
     const drawnFeature = createFeatureFromDraw(feature.geometry.coordinates);
@@ -75,3 +93,5 @@ export const handleDrawModeChange = (e: DrawModeChangeEvent): void => {
     }
   }
 };
+
+

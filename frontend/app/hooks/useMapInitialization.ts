@@ -1,7 +1,7 @@
 import { useEffect, RefObject } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import { MAP_CONFIG, LAYER_IDS } from '../constants/map';
+import { MAP_CONFIG } from '../constants/map';
 
 interface UseMapInitializationProps {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -40,25 +40,6 @@ export const useMapInitialization = ({
     map.on('draw.modechange', onDrawModeChange);
 
     map.on('load', () => {
-      map.addSource(LAYER_IDS.LINES_SOURCE, {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: [],
-        },
-      });
-
-      map.addLayer({
-        id: LAYER_IDS.LINES,
-        type: 'line',
-        source: LAYER_IDS.LINES_SOURCE,
-        paint: {
-          'line-color': '#3388ff',
-          'line-width': 3,
-          'line-opacity': 0.8,
-        },
-      });
-
       mapLoadedRef.current = true;
     });
 

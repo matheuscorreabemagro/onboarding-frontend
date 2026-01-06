@@ -1,4 +1,4 @@
-import type { LineString, Position } from 'geojson';
+import type { Geometry, Position } from 'geojson';
 
 export type FeatureType = 'uploaded' | 'drawn' | 'field' | 'plantingLine';
 
@@ -10,7 +10,7 @@ export interface GeoJSONFeature {
   type: string;
   geometry: {
     type: string;
-    coordinates: number[][];
+    coordinates: any; // Pode ser Position, Position[], Position[][], etc dependendo do tipo
   };
   properties?: Record<string, unknown>;
 }
@@ -18,7 +18,7 @@ export interface GeoJSONFeature {
 export interface Feature {
   id: string;
   type: FeatureType;
-  geometry: LineString;
+  geometry: Geometry;
   properties: Record<string, unknown>;
 }
 

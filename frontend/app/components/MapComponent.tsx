@@ -9,16 +9,16 @@ import { createDrawInstance } from '../utils/drawConfig';
 import { handleDrawCreate, handleDrawModeChange } from '../utils/drawHandlers';
 import { useMapInitialization } from '../hooks/useMapInitialization';
 import { useMapTools } from '../hooks/useMapTools';
-import { useMapStyles } from '../hooks/useMapStyles';
 import { useMapInteractions } from '../hooks/useMapInteractions';
 import { useMapClick } from '../hooks/useMapClick';
 import { useKeyboardEvents } from '../hooks/useKeyboardEvents';
 import { useCursor } from '../hooks/useCursor';
-import { useFeatures } from '../hooks/useFeatures';
+import { useLayerRendering } from '../hooks/useLayerRendering';
 import FieldOffsetPopup from './FieldOffsetPopup';
 import SimplifyPopup from './SimplifyPopup';
 import DeletePopup from './DeletePopup';
 import { createMultipleOffsets, smoothLine } from '../utils/turfOperations';
+import LayerPanel from './LayerPanel';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
@@ -26,19 +26,21 @@ const MapComponent: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
-  const hasFitBoundsRef = useRef(false);
   const mapLoadedRef = useRef(false);
 
-  const features = useMapStore((state) => state.features);
+  const layers = useMapStore((state) => state.layers);
+  const activeLayerId = useMapStore((state) => state.activeLayerId);
   const selectedFeatureId = useMapStore((state) => state.selectedFeatureId);
-  const hoveredFeatureId = useMapStore((state) => state.hoveredFeatureId);
   const activeTool = useMapStore((state) => state.activeTool);
-  const uploadCounter = useMapStore((state) => state.uploadCounter);
   const popupPosition = useMapStore((state) => state.popupPosition);
   const setPopupPosition = useMapStore((state) => state.setPopupPosition);
   const setActiveTool = useMapStore((state) => state.setActiveTool);
-  const addFeature = useMapStore((state) => state.addFeature);
-  const removeFeature = useMapStore((state) => state.removeFeature);
+  const addFeatureToActiveLayer = useMapStore((state) => state.addFeatureToActiveLayer);
+  const removeFeatureFromActiveLayer = useMapStore((state) => state.removeFeatureFromActiveLayer);
+  
+  // Features da camada ativa
+  const activeLayer = layers.find(l => l.id === activeLayerId);
+  const features = activeLayer?.features || [];
 
   const handleOffsetApply = (config: { direction: 'left' | 'right' | 'both'; distance: number; count: number }) => {
     if (!selectedFeatureId) return;
@@ -56,7 +58,7 @@ const MapComponent: React.FC = () => {
     });
 
     if (offsetResults.length > 0) {
-      offsetResults.forEach((line) => addFeature(line));
+      offsetResults.forEach((line) => addFeatureToActiveLayer(line));
     }
     
     setPopupPosition(null);
@@ -73,8 +75,8 @@ const MapComponent: React.FC = () => {
     
     const smoothResult = smoothLine(selectedFeature, resolution);
     if (smoothResult) {
-      removeFeature(selectedFeatureId);
-      addFeature(smoothResult);
+      removeFeatureFromActiveLayer(selectedFeatureId);
+      addFeatureToActiveLayer(smoothResult);
     }
     
     setPopupPosition(null);
@@ -91,17 +93,19 @@ const MapComponent: React.FC = () => {
     onDrawModeChange: (e) => handleDrawModeChange(e as unknown as Parameters<typeof handleDrawModeChange>[0]),
   });
 
-  useMapTools({ drawRef, mapLoadedRef, activeTool, features, selectedFeatureId });
-  useMapStyles({ mapRef, mapLoadedRef, selectedFeatureId, hoveredFeatureId });
+  useMapTools({ drawRef, mapRef, mapLoadedRef, activeTool, features, selectedFeatureId });
+  useLayerRendering({ mapRef, mapLoadedRef });
   useMapInteractions({ mapRef, mapLoadedRef });
   useMapClick({ mapRef, mapLoadedRef });
   useKeyboardEvents({ selectedFeatureId });
   useCursor({ mapRef, activeTool });
-  useFeatures({ mapRef, mapLoadedRef, hasFitBoundsRef, features, uploadCounter });
 
   return (
     <>
       <div ref={mapContainerRef} style={{ width: '100vw', height: '100vh' }} className="relative" />
+      
+      {/* Layer Panel */}
+      <LayerPanel mapRef={mapRef} />
       
       {/* Popups aparecem quando ferramenta está ativa E linha selecionada */}
       {activeTool === 'offset' && popupPosition && selectedFeatureId && (
@@ -131,7 +135,7 @@ const MapComponent: React.FC = () => {
         <DeletePopup
           position={popupPosition}
           onConfirm={() => {
-            removeFeature(selectedFeatureId);
+            removeFeatureFromActiveLayer(selectedFeatureId);
             setPopupPosition(null);
           }}
           onClose={() => {

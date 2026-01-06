@@ -8,11 +8,11 @@ interface UseKeyboardEventsProps {
 export const useKeyboardEvents = ({ selectedFeatureId }: UseKeyboardEventsProps) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const { activeTool, removeFeature } = useMapStore.getState();
+      const { activeTool, removeFeatureFromActiveLayer } = useMapStore.getState();
       
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedFeatureId && !activeTool) {
         e.preventDefault();
-        removeFeature(selectedFeatureId);
+        removeFeatureFromActiveLayer(selectedFeatureId);
       }
     };
 

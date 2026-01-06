@@ -19,10 +19,28 @@ export const fitMapToFeatures = (
   if (features.length === 0) return;
 
   const bounds = new mapboxgl.LngLatBounds();
+  
   features.forEach((feature) => {
-    feature.geometry.coordinates.forEach((coord) => {
-      bounds.extend(coord as [number, number]);
-    });
+    const geom = feature.geometry;
+    
+    // Helper para adicionar coordenadas aos bounds
+    const addCoords = (coords: any) => {
+      if (Array.isArray(coords[0])) {
+        // Array de arrays (LineString, Polygon ring, etc)
+        coords.forEach((coord: any) => {
+          if (typeof coord[0] === 'number') {
+            bounds.extend(coord as [number, number]);
+          } else {
+            addCoords(coord);
+          }
+        });
+      } else if (typeof coords[0] === 'number') {
+        // Coordenada única (Point)
+        bounds.extend(coords as [number, number]);
+      }
+    };
+    
+    addCoords((geom as any).coordinates);
   });
 
   map.fitBounds(bounds, {
