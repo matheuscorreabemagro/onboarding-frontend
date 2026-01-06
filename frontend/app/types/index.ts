@@ -3,6 +3,11 @@ import type { Geometry, Position } from 'geojson';
 export type FeatureType = 'uploaded' | 'drawn' | 'field' | 'plantingLine';
 
 /**
+ * Tipos para coordenadas GeoJSON
+ */
+export type Coordinates = Position | Position[] | Position[][] | Position[][][];
+
+/**
  * Representa uma feature GeoJSON antes da conversão para o formato interno
  */
 export interface GeoJSONFeature {
@@ -10,7 +15,7 @@ export interface GeoJSONFeature {
   type: string;
   geometry: {
     type: string;
-    coordinates: any; // Pode ser Position, Position[], Position[][], etc dependendo do tipo
+    coordinates: Coordinates;
   };
   properties?: Record<string, unknown>;
 }

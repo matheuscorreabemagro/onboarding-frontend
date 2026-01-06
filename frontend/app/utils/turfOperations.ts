@@ -57,8 +57,7 @@ export const splitLine = (
     }
 
     // Converte de volta para o formato do app
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return split.features.map((feature: any, index: number) => ({
+    return split.features.map((feature: turf.helpers.Feature<turf.helpers.LineString>, index: number) => ({
       id: `split-${Date.now()}-${index}`,
       type: 'drawn' as const,
       geometry: feature.geometry,

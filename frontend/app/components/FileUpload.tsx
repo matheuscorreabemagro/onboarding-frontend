@@ -58,7 +58,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onClose }) => {
       const newFeatures = features.map((f: GeoJSONFeature, i: number) => ({
         id: f.id ? String(f.id) : `uploaded-${Date.now()}-${i}`,
         type: 'uploaded' as const,
-        geometry: f.geometry as any,
+        geometry: f.geometry as import('geojson').Geometry,
         properties: f.properties || {},
       }));
 

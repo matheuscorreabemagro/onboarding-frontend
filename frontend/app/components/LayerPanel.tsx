@@ -95,7 +95,7 @@ export default function LayerPanel({ mapRef }: LayerPanelProps) {
       const features = validFeatures.map((f, i) => ({
         id: f.id ? String(f.id) : `uploaded-${Date.now()}-${i}`,
         type: 'uploaded' as const,
-        geometry: f.geometry as any,
+        geometry: f.geometry as import('geojson').Geometry,
         properties: f.properties || {},
       }));
       

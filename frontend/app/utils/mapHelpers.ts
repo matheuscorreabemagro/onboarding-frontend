@@ -23,24 +23,29 @@ export const fitMapToFeatures = (
   features.forEach((feature) => {
     const geom = feature.geometry;
     
-    // Helper para adicionar coordenadas aos bounds
-    const addCoords = (coords: any) => {
-      if (Array.isArray(coords[0])) {
-        // Array de arrays (LineString, Polygon ring, etc)
-        coords.forEach((coord: any) => {
-          if (typeof coord[0] === 'number') {
-            bounds.extend(coord as [number, number]);
-          } else {
-            addCoords(coord);
-          }
-        });
-      } else if (typeof coords[0] === 'number') {
-        // Coordenada única (Point)
+    // Helper para adicionar coordenadas aos bounds (recursivo)
+    const addCoords = (coords: unknown): void => {
+      if (!Array.isArray(coords)) return;
+      
+      if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+        // Coordenada única [lng, lat]
         bounds.extend(coords as [number, number]);
+      } else if (Array.isArray(coords[0])) {
+        // Array de coordenadas - processa recursivamente
+        coords.forEach((coord) => addCoords(coord));
       }
     };
     
-    addCoords((geom as any).coordinates);
+    // GeometryCollection não tem coordinates direto
+    if (geom.type === 'GeometryCollection') {
+      geom.geometries.forEach((g) => {
+        if ('coordinates' in g) {
+          addCoords(g.coordinates);
+        }
+      });
+    } else if ('coordinates' in geom) {
+      addCoords(geom.coordinates);
+    }
   });
 
   map.fitBounds(bounds, {
