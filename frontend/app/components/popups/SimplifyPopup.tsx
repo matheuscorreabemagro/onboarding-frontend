@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { PopupPosition } from '../types';
+import Button from '../ui/Button';
+import IconButton from '../ui/IconButton';
+import Overlay from '../ui/Overlay';
+import type { PopupPosition } from '../../types';
 
 type SimplifyLevel = 'low' | 'medium' | 'high';
 
@@ -21,13 +24,8 @@ export default function SimplifyPopup({ position, onApply, onClose }: SimplifyPo
 
   return (
     <>
-      {/* Overlay invisível para fechar ao clicar fora */}
-      <div 
-        className="fixed inset-0 z-40" 
-        onClick={onClose}
-      />
+      <Overlay onClick={onClose} zIndex={40} />
       
-      {/* Popup */}
       <div
         className="fixed z-50 bg-white rounded-lg shadow-2xl border border-gray-200"
         style={{
@@ -40,50 +38,41 @@ export default function SimplifyPopup({ position, onApply, onClose }: SimplifyPo
         <div className="p-3">
           <p className="text-xs font-medium text-gray-700 mb-3">Nível de suavização</p>
           <div className="flex gap-2">
-            <button
+            <IconButton
               onClick={() => setLevel('low')}
-              className={`flex flex-col items-center justify-center w-20 h-20 rounded-lg border-2 transition-all ${
-                level === 'low'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 hover:border-gray-300 text-gray-600'
-              }`}
+              active={level === 'low'}
               title="Baixo"
+              className="w-20 h-20"
             >
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12 L12 8 L17 12 L12 16 Z" />
               </svg>
               <span className="text-xs mt-1 font-medium">Baixo</span>
-            </button>
+            </IconButton>
             
-            <button
+            <IconButton
               onClick={() => setLevel('medium')}
-              className={`flex flex-col items-center justify-center w-20 h-20 rounded-lg border-2 transition-all ${
-                level === 'medium'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 hover:border-gray-300 text-gray-600'
-              }`}
+              active={level === 'medium'}
               title="Médio"
+              className="w-20 h-20"
             >
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12 Q9 8, 12 12 T19 12" />
               </svg>
               <span className="text-xs mt-1 font-medium">Médio</span>
-            </button>
+            </IconButton>
             
-            <button
+            <IconButton
               onClick={() => setLevel('high')}
-              className={`flex flex-col items-center justify-center w-20 h-20 rounded-lg border-2 transition-all ${
-                level === 'high'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 hover:border-gray-300 text-gray-600'
-              }`}
+              active={level === 'high'}
               title="Alto"
+              className="w-20 h-20"
             >
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12 Q6 6, 12 12 T21 12" />
               </svg>
               <span className="text-xs mt-1 font-medium">Alto</span>
-            </button>
+            </IconButton>
           </div>
           
           <div className="mt-3 text-xs text-gray-600 text-center">
@@ -92,12 +81,13 @@ export default function SimplifyPopup({ position, onApply, onClose }: SimplifyPo
             {level === 'high' && 'Suavização forte, remove mais vértices'}
           </div>
           
-          <button
+          <Button
             onClick={handleApply}
-            className="w-full mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            variant="primary"
+            className="w-full mt-3"
           >
             Aplicar
-          </button>
+          </Button>
         </div>
       </div>
     </>

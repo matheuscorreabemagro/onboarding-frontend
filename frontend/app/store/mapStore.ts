@@ -48,6 +48,7 @@ interface MapStore {
   updateLayerName: (id: string, name: string) => void;
   addFeatureToActiveLayer: (feature: Feature) => void;
   removeFeatureFromActiveLayer: (featureId: string) => void;
+  removeFeature: (featureId: string) => void;
 }
 
 export const useMapStore = create<MapStore>((set) => ({
@@ -189,6 +190,25 @@ export const useMapStore = create<MapStore>((set) => ({
           ? { ...layer, features: layer.features.filter(f => f.id !== featureId) }
           : layer
       ),
+      selectedFeatureId: state.selectedFeatureId === featureId ? null : state.selectedFeatureId,
+    };
+  }),
+  
+  // Remove uma feature de qualquer camada (não apenas da ativa)
+  removeFeature: (featureId: string) => set((state) => {
+    
+    const newLayers = state.layers.map(layer => {
+      const newFeatures = layer.features.filter(f => f.id !== featureId);
+      if (newFeatures.length !== layer.features.length) {
+      }
+      return {
+        ...layer,
+        features: newFeatures
+      };
+    });
+        
+    return {
+      layers: newLayers,
       selectedFeatureId: state.selectedFeatureId === featureId ? null : state.selectedFeatureId,
     };
   }),

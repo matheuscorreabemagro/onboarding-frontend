@@ -1,22 +1,23 @@
-# 🗺️ Geospatial Drawing Application
+# 🗺️ Geospatial Drawing Application (Full Stack)
 
-Aplicação web moderna para visualização e manipulação de dados geoespaciais com Next.js, TypeScript e Mapbox. Oferece ferramentas avançadas de desenho e edição de geometrias, com operações geoespaciais complexas utilizando Turf.js.
+Aplicação web full stack moderna para visualização e manipulação de dados geoespaciais. Frontend em Next.js/TypeScript/Mapbox com Backend em FastAPI/PostgreSQL/PostGIS. Oferece ferramentas avançadas de desenho, edição, importação e exportação de geometrias.
 
 ## 📋 Índice
 
 - [Características](#-características)
-- [Pré-requisitos](#-pré-requisitos)
-- [Instalação](#-instalação)
-- [Configuração](#-configuração)
-- [Executando o Projeto](#-executando-o-projeto)
-- [Testes](#-testes)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
+- [Pré-requisitos](#-pré-requisitos)
+- [Quick Start](#-quick-start)
+- [Frontend](#-frontend)
+- [Backend](#-backend)
+- [Testes](#-testes)
 - [Tecnologias](#-tecnologias)
 - [Documentação Adicional](#-documentação-adicional)
 - [Troubleshooting](#-troubleshooting)
 
 ## ✨ Características
 
+### Frontend
 - 🎨 **Interface Intuitiva**: Interface clean com React e Tailwind CSS
 - 🗺️ **Mapbox GL JS**: Visualização de mapas interativos de alta performance
 - ✏️ **Ferramentas de Desenho**: Draw, Edit, Delete geometrias (Point, LineString, Polygon)
@@ -25,17 +26,107 @@ Aplicação web moderna para visualização e manipulação de dados geoespaciai
 - ⚡ **State Management**: Zustand para gerenciamento de estado global
 - 🎯 **TypeScript**: Tipagem forte em todo o código
 - ✅ **100% Test Coverage**: 131 testes unitários com Jest e Testing Library
-- 🐳 **Docker**: Deploy fácil com Docker Compose (Next.js + Nginx + MongoDB)
+
+### Backend (Novo! 🎉)
+- 🚀 **FastAPI**: API RESTful moderna e rápida
+- 🗄️ **PostgreSQL + PostGIS**: Banco de dados geoespacial robusto
+- 📦 **Import Multi-formato**: GeoJSON, KML, Shapefile
+- 💾 **Persistência**: Salvar geometrias no banco de dados
+- 🔄 **CRUD Completo**: Criar, ler, atualizar, deletar camadas
+- 📤 **Export Multi-formato**: GeoJSON, KML, Shapefile
+- 🔍 **Busca Espacial**: Queries geoespaciais otimizadas
+- 🐳 **Docker**: Deploy fácil com Docker Compose
 
 ## 🔧 Pré-requisitos
 
+### Frontend
 - **Node.js**: versão 18.x ou superior
 - **npm**: versão 9.x ou superior
-- **Docker** (opcional): versão 20.x ou superior
-- **Docker Compose** (opcional): versão 2.x ou superior
 - **Mapbox Access Token**: necessário para uso da API Mapbox
 
-## 📦 Instalação
+### Backend
+- **Python**: versão 3.11 ou superior
+- **PostgreSQL**: versão 15 ou superior com extensão PostGIS
+- **Docker** (recomendado): versão 20.x ou superior
+- **Docker Compose**: versão 2.x ou superior
+
+## 🚀 Quick Start
+
+### Opção 1: Docker (Recomendado - Full Stack)
+
+```bash
+# 1. Backend
+cd backend
+cp .env.example .env
+docker-compose up -d
+docker-compose exec backend alembic upgrade head
+
+# 2. Frontend
+cd ../frontend
+cp .env.example .env
+npm install
+npm run dev
+
+# Acessar:
+# - Frontend: http://localhost:3000
+# - Backend API: http://localhost:8000
+# - Backend Docs: http://localhost:8000/docs
+```
+
+### Opção 2: Local Development
+
+```bash
+# 1. Backend (terminal 1)
+cd backend
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+alembic upgrade head
+uvicorn app.main:app --reload
+
+# 2. Frontend (terminal 2)
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
+
+## 📁 Estrutura do Projeto
+
+```
+frontend/
+├── backend/                    # 🆕 Backend FastAPI
+│   ├── alembic/                # Migrations
+│   ├── app/
+│   │   ├── models/             # SQLAlchemy models
+│   │   ├── routes/             # API endpoints
+│   │   ├── schemas/            # Pydantic schemas
+│   │   └── services/           # Business logic
+│   ├── docker-compose.yml      # Docker setup
+│   ├── requirements.txt        # Python dependencies
+│   ├── README.md               # Backend docs
+│   ├── ONBOARDING.md          # Detailed guide
+│   └── INTEGRATION.md         # Frontend integration
+│
+├── frontend/                   # Frontend Next.js
+│   ├── app/
+│   │   ├── components/         # React components
+│   │   ├── hooks/              # Custom hooks
+│   │   ├── store/              # Zustand store
+│   │   ├── types/              # TypeScript types
+│   │   └── utils/              # Utilities
+│   ├── public/                 # Static assets
+│   ├── __tests__/              # Tests
+│   ├── docker-compose.yml      # Docker setup
+│   └── package.json            # Dependencies
+│
+└── README.md                   # This file
+```
+
+## 💻 Frontend
+
+### Instalação
 
 ### 1. Clone o Repositório
 
@@ -146,7 +237,79 @@ docker compose up --build app
 docker compose down -v
 ```
 
+## 🔙 Backend
+
+O backend foi implementado com FastAPI, PostgreSQL/PostGIS e fornece API RESTful completa para gerenciamento de geometrias.
+
+### 🌟 Funcionalidades
+
+- ✅ **Import de arquivos**: GeoJSON, KML, Shapefile
+- ✅ **Persistência**: PostgreSQL com extensão PostGIS
+- ✅ **CRUD completo**: Create, Read, Update, Delete layers
+- ✅ **Export multi-formato**: GeoJSON, KML, Shapefile
+- ✅ **API RESTful**: Documentação automática com Swagger
+- ✅ **Migrations**: Controle de versão com Alembic
+
+### 📚 Documentação Detalhada
+
+- **[backend/README.md](backend/README.md)** - Documentação geral do backend
+- **[backend/QUICKSTART.md](backend/QUICKSTART.md)** - Setup rápido em 5 minutos
+- **[backend/ONBOARDING.md](backend/ONBOARDING.md)** - Guia completo de onboarding
+- **[backend/INTEGRATION.md](backend/INTEGRATION.md)** - Integração com frontend
+- **[backend/COMMANDS.md](backend/COMMANDS.md)** - Comandos úteis
+
+### 🚀 Quick Start Backend
+
+```bash
+cd backend
+
+# Docker (recomendado)
+docker-compose up -d
+docker-compose exec backend alembic upgrade head
+
+# Local
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+**Acessar:**
+- API: http://localhost:8000
+- Documentação: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+### 🔌 Principais Endpoints
+
+```
+POST   /api/v1/layers/              # Criar camada
+GET    /api/v1/layers/              # Listar camadas
+GET    /api/v1/layers/geojson       # Listar como GeoJSON
+GET    /api/v1/layers/{id}          # Buscar camada
+PUT    /api/v1/layers/{id}          # Atualizar camada
+DELETE /api/v1/layers/{id}          # Deletar camada
+POST   /api/v1/layers/upload        # Upload de arquivo
+GET    /api/v1/layers/{id}/export/{format}  # Exportar camada
+```
+
+### 🧪 Testar Backend
+
+```bash
+# Via Swagger UI
+http://localhost:8000/docs
+
+# Via script Python
+cd backend
+python test_api.py
+
+# Via curl
+curl http://localhost:8000/health
+```
+
 ## ✅ Testes
+
+### Frontend
 
 Este projeto possui **131 testes unitários** com cobertura completa.
 
@@ -256,6 +419,7 @@ frontend/
 
 ## 🛠️ Tecnologias
 
+### Frontend
 | Categoria | Tecnologias |
 |-----------|-------------|
 | **Framework** | Next.js 16.0.10 (App Router) |
@@ -266,11 +430,38 @@ frontend/
 | **State** | Zustand 5.x |
 | **Testes** | Jest 30.2.0, Testing Library 16.3.1 |
 | **Linting** | ESLint 9.x, TypeScript ESLint |
-| **Deploy** | Docker, Nginx, MongoDB |
 
-## � Requisitos Atendidos
+### Backend
+| Categoria | Tecnologias |
+|-----------|-------------|
+| **Framework** | FastAPI 0.109.0 |
+| **Linguagem** | Python 3.11+ |
+| **Database** | PostgreSQL 15 + PostGIS 3.4 |
+| **ORM** | SQLAlchemy 2.0, GeoAlchemy2 |
+| **Geoespacial** | Shapely 2.0, Fiona 1.9, FastKML 1.0 |
+| **Validação** | Pydantic 2.5 |
+| **Migrations** | Alembic 1.13 |
+| **Deploy** | Docker, Docker Compose |
 
-Este projeto implementa todas as funcionalidades geoespaciais solicitadas na story original:
+## ✅ Requisitos Atendidos
+
+Este projeto implementa todas as funcionalidades geoespaciais solicitadas:
+
+### Story Original - Frontend
+- ✅ **Desenhar geometrias**: Point, LineString, Polygon
+- ✅ **Editar geometrias**: Modificar vértices e formas
+- ✅ **Deletar geometrias**: Remover do mapa
+- ✅ **Upload GeoJSON**: Importar arquivos GeoJSON
+- ✅ **Download GeoJSON**: Exportar geometrias
+
+### Task Atual - Backend (🆕)
+- ✅ **Importação multi-formato**: GeoJSON, KML, Shapefile
+- ✅ **Persistência no banco**: PostgreSQL + PostGIS
+- ✅ **Recuperação e edição**: Carregar do banco e editar no Mapbox
+- ✅ **Gerenciamento de camadas**: Listar, criar, atualizar, deletar
+- ✅ **Exportação multi-formato**: GeoJSON, KML, Shapefile
+
+### Ferramentas Geoespaciais Avançadas
 
 ### ✅ Objetivo: Capacitação Técnica Completa
 
@@ -413,23 +604,5 @@ sudo usermod -aG docker $USER
 # Relogar ou executar
 newgrp docker
 ```
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT.
-
-## 👨‍💻 Desenvolvedor
-
-Desenvolvido com ❤️ usando as melhores práticas de desenvolvimento moderno.
-
----
 
 **Status do Projeto**: ✅ 131/131 Testes Passando | 🐳 Docker Ready | 📦 Production Ready

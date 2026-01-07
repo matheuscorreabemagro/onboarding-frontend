@@ -1,11 +1,11 @@
 'use client';
 
-import { isValidGeoJSON } from '../utils/geojsonValidator';
+import { isValidGeoJSON } from '../../utils/geojsonValidator';
 import React, { useRef, useState, useEffect } from 'react';
-import { useMapStore } from '../store/mapStore';
-import Alert from './Alert';
-import { logger } from '../utils/logger';
-import type { GeoJSONFeature } from '../types';
+import { useMapStore } from '../../store/mapStore';
+import Alert from '../ui/Alert';
+import { logger } from '../../utils/logger';
+import type { GeoJSONFeature } from '../../types';
 
 interface FileUploadProps {
   onClose?: () => void;

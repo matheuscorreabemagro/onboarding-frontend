@@ -1,9 +1,11 @@
 'use client';
 
-import { useMapStore, type ToolMode } from '../store/mapStore';
+import { useMapStore, type ToolMode } from '../../store/mapStore';
 import { useState } from 'react';
 import FileUpload from './FileUpload';
-import { isLineGeometry, isPolygonGeometry } from '../utils/turfOperations';
+import Button from '../ui/Button';
+import { CloseIcon } from './../icons';
+import { getToolValidation } from '../../services/toolsService';
 
 /**
  * Constante para posição central do popup
@@ -37,10 +39,8 @@ export default function Toolbar() {
   // Pega a feature selecionada
   const selectedFeature = features.find(f => f.id === selectedFeatureId);
   
-  // Determina quais ferramentas são válidas para a geometria selecionada
-  const canSplit = selectedFeature ? isLineGeometry(selectedFeature) : false;
-  const canOffset = selectedFeature ? isLineGeometry(selectedFeature) : false;
-  const canSimplify = selectedFeature ? (isLineGeometry(selectedFeature) || isPolygonGeometry(selectedFeature)) : false;
+  // Determina quais ferramentas são válidas para a geometria selecionada (usando service)
+  const { canSplit, canOffset, canSimplify } = getToolValidation(selectedFeature);
 
   const tools: ToolButton[] = [
     {
@@ -126,11 +126,10 @@ export default function Toolbar() {
 
         {/* Botão Upload */}
         <div className="mb-2 w-full px-2">
-          <button
+          <Button
             onClick={() => setShowUploadModal(true)}
-            className="group relative w-12 h-12 rounded-lg transition-all bg-linear-to-br from-green-500 to-emerald-600 text-white hover:shadow-md hover:scale-105"
+            className="group relative w-12 h-12 rounded-lg bg-linear-to-br from-green-500 to-emerald-600 text-white hover:shadow-md hover:scale-105"
             title="Upload GeoJSON"
-            aria-label="Abrir modal de upload de arquivo GeoJSON"
           >
             <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -138,7 +137,7 @@ export default function Toolbar() {
             <div className="absolute left-16 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
               Upload
             </div>
-          </button>
+          </Button>
         </div>
 
         <div className="w-full border-b border-gray-200 mb-2" />
@@ -168,15 +167,16 @@ export default function Toolbar() {
           }
 
           return (
-            <button
+            <Button
               key={tool.id}
               onClick={() => handleToolClick(tool.id)}
               disabled={isDisabled}
-              className={`group relative w-12 h-12 rounded-lg transition-all ${
+              variant={isActive ? 'primary' : (isDisabled ? 'secondary' : 'secondary')}
+              className={`group relative w-12 h-12 rounded-lg ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-md'
                   : isDisabled
-                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                  ? 'bg-gray-100 text-gray-300'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               }`}
               title={isDisabled ? disabledReason : tool.description}
@@ -211,7 +211,7 @@ export default function Toolbar() {
               <div className="absolute left-16 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
                 {tool.label}
               </div>
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -225,16 +225,16 @@ export default function Toolbar() {
         
         {/* Botão Remover */}
         {selectedFeatureId && (
-          <button
+          <Button
             onClick={handleRemove}
-            className="mt-3 w-12 h-12 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+            variant="danger"
+            className="mt-3 w-12 h-12 rounded-lg"
             title="Remover linha selecionada"
-            aria-label="Remover linha selecionada do mapa"
           >
             <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -254,9 +254,7 @@ export default function Toolbar() {
             className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
             aria-label="Fechar modal de upload"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <CloseIcon className="w-8 h-8" />
           </button>
           <FileUpload onClose={() => setShowUploadModal(false)} />
         </div>

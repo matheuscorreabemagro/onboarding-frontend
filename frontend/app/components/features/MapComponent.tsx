@@ -4,20 +4,20 @@ import React, { useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-import { useMapStore } from '../store/mapStore';
-import { createDrawInstance } from '../utils/drawConfig';
-import { handleDrawCreate, handleDrawModeChange } from '../utils/drawHandlers';
-import { useMapInitialization } from '../hooks/useMapInitialization';
-import { useMapTools } from '../hooks/useMapTools';
-import { useMapInteractions } from '../hooks/useMapInteractions';
-import { useMapClick } from '../hooks/useMapClick';
-import { useKeyboardEvents } from '../hooks/useKeyboardEvents';
-import { useCursor } from '../hooks/useCursor';
-import { useLayerRendering } from '../hooks/useLayerRendering';
-import FieldOffsetPopup from './FieldOffsetPopup';
-import SimplifyPopup from './SimplifyPopup';
-import DeletePopup from './DeletePopup';
-import { createMultipleOffsets, smoothLine } from '../utils/turfOperations';
+import { useMapStore } from '../../store/mapStore';
+import { createDrawInstance } from '../../utils/drawConfig';
+import { handleDrawCreate, handleDrawModeChange } from '../../utils/drawHandlers';
+import { useMapInitialization } from '../../hooks/useMapInitialization';
+import { useMapTools } from '../../hooks/useMapTools';
+import { useMapInteractions } from '../../hooks/useMapInteractions';
+import { useMapClick } from '../../hooks/useMapClick';
+import { useKeyboardEvents } from '../../hooks/useKeyboardEvents';
+import { useCursor } from '../../hooks/useCursor';
+import { useLayerRendering } from '../../hooks/useLayerRendering';
+import FieldOffsetPopup from '../popups/FieldOffsetPopup';
+import SimplifyPopup from '../popups/SimplifyPopup';
+import DeletePopup from '../popups/DeletePopup';
+import { createMultipleOffsets, smoothLine } from '../../utils/turfOperations';
 import LayerPanel from './LayerPanel';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
@@ -36,6 +36,7 @@ const MapComponent: React.FC = () => {
   const setPopupPosition = useMapStore((state) => state.setPopupPosition);
   const setActiveTool = useMapStore((state) => state.setActiveTool);
   const addFeatureToActiveLayer = useMapStore((state) => state.addFeatureToActiveLayer);
+  const removeFeature = useMapStore((state) => state.removeFeature);
   const removeFeatureFromActiveLayer = useMapStore((state) => state.removeFeatureFromActiveLayer);
   
   // Features da camada ativa
@@ -93,6 +94,15 @@ const MapComponent: React.FC = () => {
     onDrawModeChange: (e) => handleDrawModeChange(e as unknown as Parameters<typeof handleDrawModeChange>[0]),
   });
 
+  // Habilitar scroll do mouse para navegação
+  React.useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.scrollZoom.enable();
+      mapRef.current.dragRotate.disable();
+      mapRef.current.touchZoomRotate.disableRotation();
+    }
+  }, []);
+
   useMapTools({ drawRef, mapRef, mapLoadedRef, activeTool, features, selectedFeatureId });
   useLayerRendering({ mapRef, mapLoadedRef });
   useMapInteractions({ mapRef, mapLoadedRef });
@@ -135,7 +145,7 @@ const MapComponent: React.FC = () => {
         <DeletePopup
           position={popupPosition}
           onConfirm={() => {
-            removeFeatureFromActiveLayer(selectedFeatureId);
+            removeFeature(selectedFeatureId);
             setPopupPosition(null);
           }}
           onClose={() => {

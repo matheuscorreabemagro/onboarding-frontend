@@ -10,6 +10,10 @@ interface AlertProps {
   onClose?: () => void;
 }
 
+/**
+ * Componente Alert otimizado com React.memo
+ * Evita re-renders desnecessários quando props não mudam
+ */
 const Alert: React.FC<AlertProps> = ({ type, message, onClose }) => {
   const styles = {
     success: {
@@ -67,4 +71,5 @@ const Alert: React.FC<AlertProps> = ({ type, message, onClose }) => {
   );
 };
 
-export default Alert;
+// Otimização: Evita re-renders quando props não mudam
+export default React.memo(Alert);

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Button from '../ui/Button';
+import { CloseIcon } from '../icons';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -46,7 +48,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={onClose}
       onWheel={(e) => e.stopPropagation()}
       onTouchMove={(e) => e.stopPropagation()}
@@ -60,25 +62,14 @@ export default function Modal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-          <button
+          <Button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
-            aria-label="Fechar"
+            variant="secondary"
+            className="p-1 rounded-lg"
+            title="Fechar"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+            <CloseIcon className="w-6 h-6" />
+          </Button>
         </div>
 
         {/* Content */}

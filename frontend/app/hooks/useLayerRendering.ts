@@ -1,5 +1,4 @@
-import { useEffect, RefObject } from 'react';
-import mapboxgl from 'mapbox-gl';
+import { useEffect, RefObject, useRef } from 'react';
 import { useMapStore } from '../store/mapStore';
 import type { FeatureCollection } from 'geojson';
 
@@ -10,40 +9,68 @@ interface UseLayerRenderingProps {
 
 export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingProps) => {
   const layers = useMapStore((state) => state.layers);
-  const uploadCounter = useMapStore((state) => state.uploadCounter);
   const selectedFeatureId = useMapStore((state) => state.selectedFeatureId);
   const hoveredFeatureId = useMapStore((state) => state.hoveredFeatureId);
+  
+  // Guardar estado anterior das layers para detectar remoções e mudanças de visibilidade
+  const prevLayersRef = useRef<Map<string, { isVisible: boolean }>>(new Map());
+  
+  // Criar um hash das features para detectar mudanças
+  const featuresHash = layers.map(l => `${l.id}:${l.features.length}:${l.isVisible}`).join('|');
 
+  // Efeito 1: Criar/remover layers (só quando layers array mudar)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoadedRef.current) return;
 
-    // Remove todas as layers e sources antigas
-    layers.forEach((layer) => {
-      const layerId = `layer-${layer.id}`;
-      const sourceId = `source-${layer.id}`;
+    // IDs das layers atuais
+    const currentLayerIds = new Set(layers.map(l => l.id));
+    const prevLayerIds = new Set(prevLayersRef.current.keys());
+    
+    // Encontrar layers que foram removidas
+    const removedLayerIds = Array.from(prevLayerIds).filter(
+      id => !currentLayerIds.has(id)
+    );
+    
+    // Encontrar layers que ficaram invisíveis
+    const invisibleLayerIds = layers
+      .filter(layer => !layer.isVisible)
+      .map(layer => layer.id);
+    
+    // Combinar: remover layers deletadas + layers invisíveis + layers visíveis (para recriar com novos dados)
+    const visibleLayerIds = layers
+      .filter(layer => layer.isVisible)
+      .map(layer => layer.id);
+    
+    const layersToRemove = [...new Set([...removedLayerIds, ...invisibleLayerIds, ...visibleLayerIds])];
+    
+    
+    // Remover layers (todas as layers existentes)
+    layersToRemove.forEach((layerId) => {
+      const sourceId = `source-${layerId}`;
+      const layerPrefix = `layer-${layerId}`;
       
       // Lista de todas as possíveis layers
       const possibleLayers = [
         // Base layers
-        `${layerId}-fill`,
-        `${layerId}-outline`,
-        `${layerId}-line`,
-        `${layerId}-point`,
+        `${layerPrefix}-fill`,
+        `${layerPrefix}-outline`,
+        `${layerPrefix}-line`,
+        `${layerPrefix}-point`,
         // Hover layers
-        `${layerId}-hover-fill`,
-        `${layerId}-hover-outline`,
-        `${layerId}-hover-line`,
-        `${layerId}-hover-point`,
+        `${layerPrefix}-hover-fill`,
+        `${layerPrefix}-hover-outline`,
+        `${layerPrefix}-hover-line`,
+        `${layerPrefix}-hover-point`,
         // Selected layers
-        `${layerId}-selected-fill`,
-        `${layerId}-selected-outline`,
-        `${layerId}-selected-line`,
-        `${layerId}-selected-point`,
-        // Legacy layers (para compatibilidade)
-        `${layerId}-selected`,
-        `${layerId}-hover`,
-        layerId,
+        `${layerPrefix}-selected-fill`,
+        `${layerPrefix}-selected-outline`,
+        `${layerPrefix}-selected-line`,
+        `${layerPrefix}-selected-point`,
+        // Legacy layers
+        `${layerPrefix}-selected`,
+        `${layerPrefix}-hover`,
+        layerPrefix,
       ];
       
       // Remove todas as layers
@@ -53,11 +80,17 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
         }
       });
       
-      // Agora remove a source
+      // Remove a source
       if (map.getSource(sourceId)) {
         map.removeSource(sourceId);
       }
     });
+    
+    // Atualizar o Map com o estado atual das layers
+    const newLayersState = new Map(
+      layers.map(layer => [layer.id, { isVisible: layer.isVisible }])
+    );
+    prevLayersRef.current = newLayersState;
 
     // Adiciona camadas na ordem correta (por zIndex)
     const sortedLayers = [...layers]
@@ -171,12 +204,7 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
               filter: ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]],
               paint: {
                 'fill-color': '#fbbf24',
-                'fill-opacity': [
-                  'case',
-                  ['==', ['get', 'originalId'], ['literal', hoveredFeatureId || '']],
-                  0.4,
-                  0,
-                ],
+                'fill-opacity': 0, // Será atualizado pelo segundo useEffect
               },
             });
           }
@@ -190,12 +218,7 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
               paint: {
                 'line-color': '#fbbf24',
                 'line-width': 3,
-                'line-opacity': [
-                  'case',
-                  ['==', ['get', 'originalId'], ['literal', hoveredFeatureId || '']],
-                  1,
-                  0,
-                ],
+                'line-opacity': 0, // Será atualizado pelo segundo useEffect
               },
             });
           }
@@ -212,12 +235,7 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
               paint: {
                 'line-color': '#fbbf24',
                 'line-width': 4,
-                'line-opacity': [
-                  'case',
-                  ['==', ['get', 'originalId'], ['literal', hoveredFeatureId || '']],
-                  1,
-                  0,
-                ],
+                'line-opacity': 0, // Será atualizado pelo segundo useEffect
               },
             });
           }
@@ -234,12 +252,7 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
               paint: {
                 'circle-color': '#fbbf24',
                 'circle-radius': 8,
-                'circle-opacity': [
-                  'case',
-                  ['==', ['get', 'originalId'], ['literal', hoveredFeatureId || '']],
-                  0.8,
-                  0,
-                ],
+                'circle-opacity': 0, // Será atualizado pelo segundo useEffect
                 'circle-stroke-color': '#fbbf24',
                 'circle-stroke-width': 2,
               },
@@ -257,12 +270,7 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
               filter: ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]],
               paint: {
                 'fill-color': '#ef4444',
-                'fill-opacity': [
-                  'case',
-                  ['==', ['get', 'originalId'], ['literal', selectedFeatureId || '']],
-                  0.3,
-                  0,
-                ],
+                'fill-opacity': 0, // Será atualizado pelo segundo useEffect
               },
             });
           }
@@ -276,12 +284,7 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
               paint: {
                 'line-color': '#ef4444',
                 'line-width': 4,
-                'line-opacity': [
-                  'case',
-                  ['==', ['get', 'originalId'], ['literal', selectedFeatureId || '']],
-                  1,
-                  0,
-                ],
+                'line-opacity': 0, // Será atualizado pelo segundo useEffect
               },
             });
           }
@@ -298,12 +301,7 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
               paint: {
                 'line-color': '#ef4444',
                 'line-width': 5,
-                'line-opacity': [
-                  'case',
-                  ['==', ['get', 'originalId'], ['literal', selectedFeatureId || '']],
-                  1,
-                  0,
-                ],
+                'line-opacity': 0, // Será atualizado pelo segundo useEffect
               },
             });
           }
@@ -320,12 +318,7 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
               paint: {
                 'circle-color': '#ef4444',
                 'circle-radius': 9,
-                'circle-opacity': [
-                  'case',
-                  ['==', ['get', 'originalId'], ['literal', selectedFeatureId || '']],
-                  0.9,
-                  0,
-                ],
+                'circle-opacity': 0, // Será atualizado pelo segundo useEffect
                 'circle-stroke-color': '#ef4444',
                 'circle-stroke-width': 3,
               },
@@ -334,15 +327,15 @@ export const useLayerRendering = ({ mapRef, mapLoadedRef }: UseLayerRenderingPro
         }
       }
     });
-  }, [layers, uploadCounter, mapRef, mapLoadedRef]);
+  }, [layers, mapRef, mapLoadedRef, featuresHash]);
 
-  // useEffect separado para atualizar apenas as paint properties quando seleção/hover mudam
+  // Efeito 2: Atualizar apenas hover/selected states (não recria layers)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoadedRef.current) return;
 
     layers.forEach((layer) => {
-      if (!layer.isActive) return;
+      if (!layer.isVisible) return; // Apenas pula se a layer estiver invisível
 
       const layerId = `layer-${layer.id}`;
       

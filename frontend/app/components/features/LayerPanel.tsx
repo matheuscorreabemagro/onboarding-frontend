@@ -1,12 +1,13 @@
 'use client';
 
-import { useMapStore } from '../store/mapStore';
-import { isValidGeoJSON } from '../utils/geojsonValidator';
+import { useMapStore } from '../../store/mapStore';
+import { isValidGeoJSON } from '../../utils/geojsonValidator';
 import LayerItem from './LayerItem';
-import Alert from './Alert';
+import Alert from '../ui/Alert';
+import BackendLayersModal from '../modals/BackendLayersModal';
 import { useState, useEffect, RefObject, useRef } from 'react';
-import type { GeoJSONFeature } from '../types';
-import type mapboxgl from 'mapbox-gl';
+import { api, type LayerResponse } from '../../services/api';
+import type { Feature, GeoJSONFeature } from '../../types';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const turf = require('@turf/turf');
@@ -21,6 +22,8 @@ export default function LayerPanel({ mapRef }: LayerPanelProps) {
   const setError = useMapStore((s) => s.setError);
   const error = useMapStore((s) => s.error);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [showBackendModal, setShowBackendModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const prevLayerCountRef = useRef(0);
   
   // Dá zoom na última camada adicionada
@@ -63,58 +66,128 @@ export default function LayerPanel({ mapRef }: LayerPanelProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    setError(null); // Limpa erro anterior
+    setUploading(true);
     
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
+      const fileExt = file.name.toLowerCase().split('.').pop();
       
-      if (!isValidGeoJSON(data)) {
-        setError('Arquivo não é um GeoJSON válido. Verifique a estrutura do arquivo.');
-        return;
-      }
-      
-      let validFeatures: GeoJSONFeature[] = [];
-      
-      if (data.type === 'FeatureCollection') {
-        validFeatures = data.features.filter((f: GeoJSONFeature) => f.geometry?.type);
+      // Se for GeoJSON, processa localmente como antes
+      if (fileExt === 'geojson' || fileExt === 'json') {
+        const text = await file.text();
+        const data = JSON.parse(text);
         
-        if (validFeatures.length === 0) {
-          setError('GeoJSON não contém nenhuma geometria válida.');
+        if (!isValidGeoJSON(data)) {
+          setError('Arquivo não é um GeoJSON válido. Verifique a estrutura do arquivo.');
+          setUploading(false);
           return;
         }
-      } else if (data.type === 'Feature') {
-        if (data.geometry?.type) {
-          validFeatures = [data];
-        } else {
-          setError('Feature não contém uma geometria válida.');
-          return;
+        
+        let validFeatures: GeoJSONFeature[] = [];
+        
+        if (data.type === 'FeatureCollection') {
+          validFeatures = data.features.filter((f: GeoJSONFeature) => f.geometry?.type);
+          
+          if (validFeatures.length === 0) {
+            setError('GeoJSON não contém nenhuma geometria válida.');
+            setUploading(false);
+            return;
+          }
+        } else if (data.type === 'Feature') {
+          if (data.geometry?.type) {
+            validFeatures = [data];
+          } else {
+            setError('Feature não contém uma geometria válida.');
+            setUploading(false);
+            return;
+          }
         }
+        
+        const features = validFeatures.map((f, i) => ({
+          id: f.id ? String(f.id) : `uploaded-${Date.now()}-${i}`,
+          type: 'uploaded' as const,
+          geometry: f.geometry as import('geojson').Geometry,
+          properties: f.properties || {},
+        }));
+        
+        addLayer(file.name, features);
+      } 
+      // Para KML e Shapefile, envia para o backend
+      else if (fileExt === 'kml' || fileExt === 'zip') {
+        const layerName = file.name.replace(/\.(kml|zip)$/, '');
+        const result = await api.uploadFile(file, layerName);
+        
+        // Buscar as camadas criadas e adicionar localmente
+        for (const layerId of result.layer_ids) {
+          const layerData = await api.getLayerGeoJSON(layerId);
+          
+          const features = [{
+            id: `backend-${layerId}`,
+            type: 'uploaded' as const,
+            geometry: layerData.geometry,
+            properties: {
+              ...layerData.properties,
+              backendId: layerId,
+            },
+          }];
+          
+          const layerName = layerData.properties?.name as string | undefined;
+          addLayer(layerName || `Camada ${layerId}`, features);
+        }
+        
+        setError(null);
+      } else {
+        setError('Formato não suportado. Use GeoJSON (.json, .geojson), KML (.kml) ou Shapefile (.zip)');
       }
       
-      const features = validFeatures.map((f, i) => ({
-        id: f.id ? String(f.id) : `uploaded-${Date.now()}-${i}`,
-        type: 'uploaded' as const,
-        geometry: f.geometry as import('geojson').Geometry,
-        properties: f.properties || {},
-      }));
-      
-      addLayer(file.name, features);
-      
-      // Limpa o input para permitir upload do mesmo arquivo
       e.target.value = '';
     } catch (err) {
       if (err instanceof SyntaxError) {
         setError('Erro ao processar arquivo: JSON inválido.');
       } else {
-        setError('Erro ao ler arquivo. Verifique se o arquivo está correto.');
+        setError(err instanceof Error ? err.message : 'Erro ao processar arquivo.');
       }
       e.target.value = '';
+    } finally {
+      setUploading(false);
     }
+  };
+
+  const handleLoadBackendLayer = (layer: LayerResponse) => {
+    let features: Feature[];
+    
+    // Se for FeatureCollection, carregar todas as features
+    if (layer.geometry_type === 'FeatureCollection' && 
+        typeof layer.geometry === 'object' && 
+        'features' in layer.geometry && 
+        Array.isArray(layer.geometry.features)) {
+      // É uma FeatureCollection - carregar todas as features
+      features = layer.geometry.features.map((feature: { type: string; geometry: GeoJSON.Geometry; properties?: Record<string, unknown> }, idx: number) => ({
+        id: `backend-${layer.id}-${idx}`,
+        type: 'uploaded' as const,
+        geometry: feature.geometry,
+        properties: {
+          ...feature.properties,
+          backendId: layer.id, // Todas compartilham o mesmo backendId
+        },
+      }));
+    } else {
+      // É uma geometria única
+      features = [{
+        id: `backend-${layer.id}`,
+        type: 'uploaded' as const,
+        geometry: layer.geometry as GeoJSON.Geometry,
+        properties: {
+          ...layer.properties,
+          backendId: layer.id,
+        },
+      }];
+    }
+    
+    addLayer(layer.name, features);
   };
   
   return (
-    <div className="fixed right-4 top-4 w-72 bg-white rounded-lg shadow-xl z-50 overflow-hidden">
+    <div className="fixed right-4 top-4 w-96 bg-white rounded-lg shadow-xl z-50 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-3 bg-linear-to-r from-blue-600 to-blue-700 text-white">
         <div className="flex items-center gap-2">
@@ -146,23 +219,36 @@ export default function LayerPanel({ mapRef }: LayerPanelProps) {
       {/* Content */}
       {!isMinimized && (
         <div className="p-3">
-          {/* Botão Nova Camada */}
-          <div className="mb-3">
+          {/* Botões de Ação */}
+          <div className="space-y-2 mb-3">
+            {/* Botão Importar Arquivo */}
             <label htmlFor="layer-upload" className="block">
               <div className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer text-center text-sm font-medium flex items-center justify-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                Nova Camada
+                {uploading ? 'Importando...' : 'Importar Arquivo'}
               </div>
             </label>
             <input
               id="layer-upload"
               type="file"
-              accept=".geojson,.json"
+              accept=".geojson,.json,.kml,.zip"
               className="hidden"
               onChange={handleFileUpload}
+              disabled={uploading}
             />
+
+            {/* Botão Carregar Camadas Salvas */}
+            <button
+              onClick={() => setShowBackendModal(true)}
+              className="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+              </svg>
+              Carregar Camadas Salvas
+            </button>
           </div>
           
           {/* Lista de Camadas */}
@@ -201,6 +287,13 @@ export default function LayerPanel({ mapRef }: LayerPanelProps) {
           )}
         </div>
       )}
+
+      {/* Modal de Camadas do Backend */}
+      <BackendLayersModal
+        isOpen={showBackendModal}
+        onClose={() => setShowBackendModal(false)}
+        onLoadLayer={handleLoadBackendLayer}
+      />
     </div>
   );
 }

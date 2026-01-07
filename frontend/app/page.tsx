@@ -1,5 +1,5 @@
-import MapComponent from './components/MapComponent';
-import Toolbar from './components/Toolbar';
+import MapComponent from './components/features/MapComponent';
+import Toolbar from './components/features/Toolbar';
 
 export default function Home() {
   return (
