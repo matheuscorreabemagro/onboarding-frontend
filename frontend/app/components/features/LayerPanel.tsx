@@ -189,7 +189,14 @@ export default function LayerPanel({ mapRef }: LayerPanelProps) {
   return (
     <div className="fixed right-4 top-4 w-96 bg-white rounded-lg shadow-xl z-50 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 bg-linear-to-r from-blue-600 to-blue-700 text-white">
+      <div
+        className="flex items-center justify-between p-3 bg-linear-to-r from-blue-600 to-blue-700 text-white cursor-pointer select-none"
+        onClick={() => setIsMinimized(!isMinimized)}
+        aria-label={isMinimized ? 'Expandir painel de camadas' : 'Minimizar painel de camadas'}
+        tabIndex={0}
+        role="button"
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setIsMinimized(!isMinimized); }}
+      >
         <div className="flex items-center gap-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
@@ -199,21 +206,14 @@ export default function LayerPanel({ mapRef }: LayerPanelProps) {
             {layers.length}
           </span>
         </div>
-        
-        <button
-          onClick={() => setIsMinimized(!isMinimized)}
-          className="p-1 hover:bg-white/10 rounded transition-colors"
-          aria-label={isMinimized ? 'Expandir' : 'Minimizar'}
+        <svg 
+          className={`w-4 h-4 transition-transform ${isMinimized ? 'rotate-180' : ''}`} 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
         >
-          <svg 
-            className={`w-4 h-4 transition-transform ${isMinimized ? 'rotate-180' : ''}`} 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
       </div>
       
       {/* Content */}

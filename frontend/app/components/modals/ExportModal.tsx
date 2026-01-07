@@ -22,7 +22,7 @@ export default function ExportModal({ isOpen, onClose, onExport, layerName }: Ex
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const formats = EXPORT_FORMATS;
+  const formats: ReadonlyArray<{ id: string; label: string; icon: string; description: string }> = EXPORT_FORMATS;
 
   const toggleFormat = (formatId: string) => {
     setSelectedFormats(prev => 
@@ -34,7 +34,7 @@ export default function ExportModal({ isOpen, onClose, onExport, layerName }: Ex
 
   const toggleAll = () => {
     if (selectedFormats.length === formats.length) {
-      setSelectedFormats(['geojson']); // Manter pelo menos um selecionado
+      setSelectedFormats([]); // Permitir desmarcar todos
     } else {
       setSelectedFormats(formats.map(f => f.id));
     }
@@ -67,8 +67,11 @@ export default function ExportModal({ isOpen, onClose, onExport, layerName }: Ex
     }
   };
 
+  // Remove extensão do nome da camada
+  const cleanLayerName = layerName.replace(/\.[^/.]+$/, '');
+
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={`Exportar: ${layerName}`}>
+    <Modal isOpen={isOpen} onClose={handleClose} title={`Exportar: ${cleanLayerName}`}>
       <div className="space-y-4">
         {error && (
           <Alert
@@ -80,12 +83,15 @@ export default function ExportModal({ isOpen, onClose, onExport, layerName }: Ex
 
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Selecione os formatos para exportação:</p>
+              <span className="text-sm text-gray-600">
+                {formats.length} {formats.length === 1 ? 'formato disponível' : 'formatos disponíveis'}
+                {selectedFormats.length > 0 && ` • ${selectedFormats.length} ${selectedFormats.length === 1 ? 'selecionado' : 'selecionados'}`}
+              </span>
             <Button
               onClick={toggleAll}
-              variant="primary"
+              variant="outline"
               size="sm"
-              className="text-xs"
+              className="text-xs border-blue-500 text-blue-600 hover:bg-blue-50 hover:border-blue-600 focus:ring-blue-500"
             >
               {selectedFormats.length === formats.length ? 'Desmarcar todos' : 'Selecionar todos'}
             </Button>

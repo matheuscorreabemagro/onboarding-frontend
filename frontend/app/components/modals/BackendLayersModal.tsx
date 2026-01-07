@@ -86,27 +86,30 @@ export default function BackendLayersModal({ isOpen, onClose, onLoadLayer }: Bac
               <LoadingSpinner size="lg" />
             </div>
           ) : layers.length === 0 ? (
-            <EmptyState
-              title="Nenhuma camada salva"
-              description="Importe e salve camadas para vê-las aqui"
-            />
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="flex flex-col items-center justify-center w-full h-full">
+                <EmptyState
+                  title="Nenhuma camada salva"
+                  description="Importe e salve camadas para vê-las aqui"
+                />
+              </div>
+            </div>
           ) : (
             <div className="space-y-3">
               {/* Seleção no topo */}
               <div className="flex items-center justify-between pb-2 border-b">
                 <Button
                   onClick={selectAll}
-                  variant="primary"
+                  variant="outline"
                   size="sm"
-                  className="text-sm"
+                  className="text-sm border-blue-500 text-blue-600 hover:bg-blue-50 hover:border-blue-600 focus:ring-blue-500"
                 >
                   {selectedLayers.size === layers.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
                 </Button>
-                {selectedLayers.size > 0 && (
-                  <span className="text-sm text-gray-600">
-                    {selectedLayers.size} {selectedLayers.size === 1 ? 'selecionada' : 'selecionadas'}
-                  </span>
-                )}
+                <span className="text-sm text-gray-600">
+                  {layers.length} {layers.length === 1 ? 'camada disponível' : 'camadas disponíveis'}
+                  {selectedLayers.size > 0 && ` • ${selectedLayers.size} ${selectedLayers.size === 1 ? 'selecionada' : 'selecionadas'}`}
+                </span>
               </div>
 
               {/* Lista de camadas */}

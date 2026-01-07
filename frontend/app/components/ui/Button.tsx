@@ -3,7 +3,7 @@ import React from 'react';
 export interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'success';
+  variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   active?: boolean;
   disabled?: boolean;
@@ -38,6 +38,7 @@ const Button: React.FC<ButtonProps> = ({
     success: active
       ? 'bg-green-700 text-white hover:bg-green-800 focus:ring-green-500'
       : 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
+    outline: 'bg-transparent border border-gray-400 text-gray-700 hover:bg-gray-100 focus:ring-gray-400',
   };
   
   const sizeStyles = {

@@ -40,21 +40,18 @@ export default function EmptyState({
   );
 
   return (
-    <div className={`text-center py-12 ${className}`}>
-      <div className="mx-auto mb-4">
+    <div className={`flex flex-col items-center justify-center text-center py-12 ${className}`}>
+      <div className="mb-4 flex items-center justify-center">
         {icon || defaultIcon}
       </div>
-      
-      <h3 className="text-lg font-medium text-gray-900 mb-2">
+      <h3 className="text-lg font-medium text-gray-900 mb-2 flex items-center justify-center">
         {title}
       </h3>
-      
       {description && (
         <p className="text-sm text-gray-500 mb-4 max-w-sm mx-auto">
           {description}
         </p>
       )}
-      
       {action && (
         <div className="mt-6">
           {action}
